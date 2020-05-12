@@ -44,6 +44,7 @@ def get_card(index):
 class Player(BaseModel):
     name: str
     balance: int
+    pending_balance: int
 
     def decrement_balance(self, value):
         if self.balance >= value:
@@ -89,32 +90,29 @@ class Game(BaseModel):
     def _finalize_betting(self, balances):
         max_bet = 0
 
+        can_bet = []
+
         # Iterate over all players who have never bet
         for player in self.players:
             if player.eligibility is None:
+                # player has folded
                 continue
 
             if balances[player.session_id] == 0:
                 continue
 
             if player.has_option:
-                # We're not done betting yet.
                 return player.session_id
 
+            can_bet.append(player)
             if player.bet > max_bet:
                 max_bet = player.bet
 
-        # Iterate again over players who are below the max bet
-        for player in self.players:
-            if player.eligibility is None:
-                # Player has folded
-                continue
-
-            if balances[player.session_id] == 0:
-                continue
-
-            if player.bet < max_bet:
-                return player.session_id
+        if len(can_bet) > 1:
+            # Iterate again over players who are below the max bet
+            for player in can_bet:
+                if player.bet < max_bet:
+                    return player.session_id
 
         # The pot is good. Calculate eligibility. A player's eligibility is equal to
         # the sum of the bets < theirs, plus their bet times the number of bets
@@ -157,6 +155,7 @@ class Game(BaseModel):
             self.stage += 1
 
         self.pay_winners(room)
+        room.new_game(self)
 
     def _get_player_idx(self, session_id):
         for idx, player in enumerate(self.players):
@@ -243,7 +242,12 @@ class Game(BaseModel):
             if player.eligibility is None:
                 continue
 
-            yield player.session_id, (player, community_cards + self._hole_cards_idx(idx))
+            if player.eligibility <= 0:
+                continue
+
+            yield player.session_id, (
+                player, community_cards + self._hole_cards_idx(idx)
+            )
 
     def pay_winners(self, room):
         final_hands = dict(self._get_final_hands())
@@ -251,6 +255,7 @@ class Game(BaseModel):
             winning_players = list(final_hands.keys())
         else:
             winners = get_winners((s_id, cards) for (s_id, (_, cards)) in final_hands.items())
+            logger.info("Winners:  %s", winners)
             winning_players = [s_id for (s_id, hand) in winners]
 
         for s_id in winning_players:
@@ -260,7 +265,24 @@ class Game(BaseModel):
             room.players[s_id].increment_balance(amount)
             self.pot -= amount
 
+        room.log.append(CompletedGame(
+            community_cards=self.community_cards,
+            players=dict(),
+        ))
+
         assert self.pot == 0
+
+
+class PlayerAfterGame(BaseModel):
+    # Hand will be None if they don't have to show
+    hand: Optional[str]
+
+    payout: int
+
+
+class CompletedGame(BaseModel):
+    community_cards: str
+    players: Dict[str, PlayerAfterGame]
 
 
 class Room(BaseModel):
@@ -271,9 +293,38 @@ class Room(BaseModel):
     players: Dict[str, Player]
 
     small_blind: int = 1
+    log: List[CompletedGame] = []
 
     def player(self, session_id):
         return self.players[session_id]
+
+    def new_game(self, previous_game):
+        if previous_game is None:
+            session_ids = list(self.players)
+            random.shuffle(session_ids)
+            in_hand = [PlayerInHand(session_id=s_id, bet=0) for s_id in session_ids]
+        else:
+            rotated_players = previous_game.players[1:] + previous_game.players[0:1]
+            in_hand = [
+                PlayerInHand(session_id=player.session_id, bet=0)
+                for player in
+                rotated_players
+            ]
+
+        cards_drawn = len(self.players) * 2 + 5
+        number_deck = list(range(52))
+        random.shuffle(number_deck)
+
+        deck = ''.join(get_card(card) for card in number_deck[:cards_drawn])
+
+        game = Game(
+            players=in_hand,
+            deck=deck,
+            pot=0,
+            stage=0,
+        )
+        self.game = game
+        game.initialize(self)
 
 
 class PydanticConsulKey(ConsulKey):
@@ -324,7 +375,7 @@ def register(room_name: str, session_id: str, player_name: str):
             raise CannotRegister(f"This room already has {len(state.players)}")
 
         state.players[session_id] = Player(
-            balance=100, name=player_name
+            balance=100, name=player_name, pending_balance=0
         )
         return state
 
@@ -353,26 +404,7 @@ def start(name: str, session_id: str):
         if len(state.players) < 2:
             raise CannotStart("You're the only one here.")
 
-        session_ids = list(state.players)
-        random.shuffle(session_ids)
-        in_hand = [PlayerInHand(session_id=s_id, bet=0) for s_id in session_ids]
-
-        # Everything below here applies to every hand.
-
-        cards_drawn = len(state.players) * 2 + 5
-        number_deck = list(range(52))
-        random.shuffle(number_deck)
-        deck = ''.join(get_card(card) for card in number_deck[:cards_drawn])
-
-        game = Game(
-            players=in_hand,
-            deck=deck,
-            pot=0,
-            stage=0,
-        )
-        state.game = game
-        game.initialize(state)
-
+        state.new_game(None)
         return state
 
     room_state.mutate(mutation)
@@ -404,22 +436,23 @@ class PlayerGameView(BaseModel):
     pot: int
     hole_cards: str
     community_cards: str
+    players: list
 
 
 class PlayerRoomView(BaseModel):
     players: Dict[str, dict]
     game: Optional[PlayerGameView]
+    log: List[CompletedGame]
 
 
-def get_player_view(room_name: str, session_id: str):
-    room_state = _room(room_name).get()[1]
-
+def _show_room(session_id, room_state):
     ret = PlayerRoomView(
         players=dict(
-            (player.name, dict(balance=player.balance))
-            for player
-            in room_state.players.values()
-        )
+            (player.name, dict(balance=player.balance, session_id=s_id))
+            for s_id, player
+            in room_state.players.items()
+        ),
+        log=room_state.log,
     )
 
     if room_state.game is None:
@@ -441,8 +474,27 @@ def get_player_view(room_name: str, session_id: str):
         pot=game.pot,
         hole_cards=game.deck[deck_index: deck_index + 4],
         community_cards=game.deck[community_start:community_end],
+        players=[
+            dict(
+                name=room_state.players[p.session_id].name,
+                bet=p.bet,
+                eligibility=p.eligibility,
+                has_option=p.has_option,
+            ) for p in
+            game.players
+        ]
     )
     return ret
+
+
+def show_room(room_name: str, session_id: str, query_index: str):
+    index, room_state = _room(room_name).get(index=query_index, wait="60s")
+    return dict(index=index, room=_show_room(session_id, room_state).dict())
+
+
+def get_player_view(room_name: str, session_id: str):
+    room_state = _room(room_name).get()[1]
+    return _show_room(session_id, room_state)
 
 
 def delete_room(name: str):

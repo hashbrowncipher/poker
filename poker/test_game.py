@@ -70,22 +70,28 @@ def test_play_hand(monkeypatch):
     assert state.stage == 3
     assert state.pot == 24
 
+    final_hands = dict(state._get_final_hands())
+    assert len(final_hands) == 2
+    assert final_hands["c"][1] == deck[12:22] + deck[4:8]
+    assert final_hands["b"][1] == deck[12:22] + deck[8:12]
+
     game.add_bet("test", "c", 1)
     game.add_bet("test", "b", 1)
 
     # Payout
 
     state = _get_game("test")
-    assert state.stage == 3
-    assert state.pot == 0
-
-    final_hands = dict(state._get_final_hands())
-    assert len(final_hands) == 2
-    assert final_hands["c"][1] == deck[12:22] + deck[4:8]
-    assert final_hands["b"][1] == deck[12:22] + deck[8:12]
+    assert state.stage == 0
+    assert state.pot == 3
+    assert state.players[0].session_id == "c"
+    assert state.players[0].bet == 1
+    assert state.players[1].session_id == "b"
+    assert state.players[1].bet == 2
+    assert state.players[2].session_id == "a"
+    assert state.players[2].bet == 0
 
     players = game.get_player_view("test", "a").players
     assert len(players) == 3
+    assert players["other"]["balance"] == 115
+    assert players["blah b"]["balance"] == 88
     assert players["blah a"]["balance"] == 94
-    assert players["blah b"]["balance"] == 90
-    assert players["other"]["balance"] == 116

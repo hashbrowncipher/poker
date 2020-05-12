@@ -2,3 +2,5 @@ gevent
 requests
 werkzeug
 pydantic
+pytest
+ipython

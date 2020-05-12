@@ -29,11 +29,18 @@ class _Consul():
         resp.raise_for_status()
         return resp.json()
 
-
     @staticmethod
-    def get(path):
+    def get(path, index=None, wait=None):
+        params = dict()
+        if index is not None:
+            params["index"] = index
+
+        if wait is not None:
+            params["wait"] = wait
+
         resp = requests.get(
             f"http://{CONSUL_HTTP_ADDR}/v1/kv{path}",
+            params=params,
         )
         index = resp.headers['X-Consul-Index']
         logger.info("GET %s <- %s", path, resp.status_code)

@@ -1,28 +1,16 @@
 from gevent.monkey import patch_all
 patch_all()  # noqa: E402
 
-from werkzeug.routing import Map
-from werkzeug.routing import Rule
-from werkzeug.exceptions import HTTPException
-from gevent.pywsgi import WSGIServer
-from uuid import uuid4
-
-
-from werkzeug.wrappers import Request
-from werkzeug.wrappers import Response
-from werkzeug.http import dump_cookie
-import json
 import logging
 
-from . import game
+from gevent.pywsgi import WSGIServer
+from poker.http import app
+
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
-# Data structures
-
-
+"""
 def _show_room(state: game.Room, player_id: str):
     players_list = list(state.players)
     my_index = players_list.index(player_id)
@@ -71,65 +59,11 @@ def route_start_game(request: Request, name: str) -> Response:
 
 def route_bet(request: Request, name: str) -> Response:
     request.args["amount"]
-
-
-url_map = Map([
-    Rule('/room/<name>', endpoint=route_show_room),
-    Rule('/room/<name>/start', endpoint=route_start_game),
-    Rule('/room/<name>/bet', endpoint=route_bet),
-])
-
-
-def dispatch(request):
-    urls = url_map.bind_to_environ(request.environ)
-    endpoint, args = urls.match()
-    return endpoint(request, **args)
-
-
-def _get_session_id(request):
-    try:
-        return request.cookies["session_id"]
-    except KeyError:
-        pass
-
-    return str(uuid4())
-
-
-def identity_middleware(environ, start_response):
-    request = Request(environ)
-    session_id = _get_session_id(request)
-
-    request.session_id = session_id
-
-    response = dispatch(request)
-    if not isinstance(response, Response):
-        response = Response(
-            json.dumps(response),
-            headers=(("Content-Type", "application/json"),)
-        )
-
-    cookie_header = dump_cookie(
-        key="session_id",
-        value=session_id.encode("ascii"),
-        max_age=86400,
-        httponly=True,
-        samesite="lax"
-    )
-    response.headers.add("Set-Cookie", cookie_header)
-    return response(environ, start_response)
-
-
-def exceptions_middleware(environ, start_response):
-    try:
-        return identity_middleware(environ, start_response)
-    except HTTPException as ex:
-        return ex(environ, start_response)
-    except:  # noqa: E722
-        logger.exception("Exception in request")
+"""
 
 
 def main():
-    server = WSGIServer(('0.0.0.0', 6543), exceptions_middleware)
+    server = WSGIServer(('0.0.0.0', 6543), app)
     server.serve_forever()
 
 

@@ -2,10 +2,18 @@ from gevent.monkey import patch_all
 patch_all()  # noqa: E402
 
 import logging
+from signal import signal
+from signal import SIGTERM
 
 from gevent.pywsgi import WSGIServer
 from poker.http import app
 
+
+def signal_handler(signum):
+    raise SystemExit(1)
+
+
+signal(SIGTERM, signal_handler)
 
 logging.basicConfig(level=logging.INFO)
 

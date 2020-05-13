@@ -7,7 +7,7 @@
 		<pre id="state" />
 		<script type="text/javascript">
 			"use strict";
-      var room_name = window.location.hash.substring(1);
+			var room_name = window.location.path.split("/").pop();
 			var state_elem = document.getElementById("state");
 			var next_index = "0";
 

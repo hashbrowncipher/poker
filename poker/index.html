@@ -18,16 +18,24 @@
   padding-bottom: 2px;
 }
 .hand {
-  grid-column: 1 / 3;
+  grid-column: 1;
+  grid-row: 2;
+}
+.community {
+  grid-column: 1;
+  grid-row: 3;
+}
+.handstate {
+  grid-column: 2 / 4;
   grid-row: 2 / 6;
 }
 .players {
   grid-column: 4;
-  grid-row: 2 / 6;
+  grid-row: 2 / 3;
 }
 .log{
-  grid-column: 3 / 4;
-  grid-row: 2 / 6;
+  grid-column: 4;
+  grid-row: 3 / 6;
 }
 </style>
     </head>
@@ -37,17 +45,24 @@
                 Welcome <input id="player_name" type="text" value="Enter your Name" style="font-size: xx-large"> to Poker!
             </div>
             <div class="hand">
-                <h2>Current Hand</h2>
-                <p><b>Your Bet:</b> <input id="bet" type="text"></p>
-                <p><b>Your Cards:</b> <span id="hole_cards" style="font-size: 200%"></p>
-                <p><b>Community Cards:</b> <span id="community_cards" style="font-size: 200%"></p>
+                <h2>Your Hand</h2>
+                <span style="font-size: 1000%">
+                <span id="hole_cards">
+            </div>
+            <div class="community">
+                <h2>Community Cards</h2>
+                <span style="font-size: 800%">
+                <span id="community_cards">
+            </div>
+            <div class="handstate" style="font-size: 200%">
+                Your Bet: <input id="bet" type="text">
                 <pre id="game" />
             </div>
-            <div class="log">
+            <div class="log" style="font-size: 150%">
                 <h2>Game Log </h3>
                 <pre id="log" />
             </div>
-            <div class="players">
+            <div class="players" style="font-size: 150%">
                 <h2>Players In Room</h3>
                 <pre id="players" />
             </div>

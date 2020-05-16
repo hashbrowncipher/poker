@@ -443,6 +443,7 @@ class PlayerGameView(BaseModel):
 
     @staticmethod
     def _convert_to_unicode(cards):
+        cards = iter(cards)
         while True:
             out = 0x1F0A0
             try:
@@ -473,11 +474,15 @@ class PlayerGameView(BaseModel):
 
             yield chr(out)
 
+    @staticmethod
+    def convert_to_unicode(cards):
+        return "".join(cards)
+
     def dict(self, *args, **kwargs):
         # Nasty hack that keeps tests passing
         val = super().dict(*args, **kwargs)
-        val["hole_cards"] = str(self._convert_to_unicode(val["hole_cards"]))
-        val["community_cards"] = str(self._convert_to_unicode(val["community_cards"]))
+        val["hole_cards"] = self.convert_to_unicode(val["hole_cards"])
+        val["community_cards"] = self.convert_to_unicode(val["community_cards"])
         return val
 
 

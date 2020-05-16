@@ -37,7 +37,7 @@
                 Welcome <input id="player_name" type="text" value="Enter your Name" style="font-size: xx-large"> to Poker!
             </div>
             <div class="hand">
-				<h2>Current Hand</h2>
+                <h2>Current Hand</h2>
                 <p><b>Your Bet:</b> <input id="bet" type="text"></p>
                 <p><b>Your Cards:</b> <span id="hole_cards" style="font-size: 200%"></p>
                 <p><b>Community Cards:</b> <span id="community_cards" style="font-size: 200%"></p>
@@ -48,7 +48,7 @@
                 <pre id="log" />
             </div>
             <div class="players">
-				<h2>Players In Room</h3>
+                <h2>Players In Room</h3>
                 <pre id="players" />
             </div>
         </div>
@@ -59,6 +59,7 @@ var game_elem = document.getElementById("game");
 var players_elem = document.getElementById("players");
 var log_elem = document.getElementById("log");
 var name_elem = document.getElementById("player_name");
+var has_updated_name = false;
 var hole_cards_elem = document.getElementById("hole_cards");
 var community_cards_elem = document.getElementById("community_cards");
 var seen_room = false;
@@ -152,16 +153,20 @@ function fetch_state() {
             return;
         }
 
-        var game = response.room.game;
+        var room = response.room;
         if(game != null) {
-            var game = response.room.game;
+            var game = room.game;
             show_cards(hole_cards_elem, game.hole_cards);
             show_cards(community_cards_elem, game.community_cards);
         }
 
-        game_elem.innerHTML = pretty_print(response.room.game);
-        players_elem.innerHTML = pretty_print(response.room.players);
-        log_elem.innerHTML = pretty_print(response.room.log);
+        game_elem.innerHTML = pretty_print(room.game);
+        players_elem.innerHTML = pretty_print(room.players);
+        log_elem.innerHTML = pretty_print(room.log);
+        if(!has_updated_name && room.name != null) {
+            name_elem.value = response.room.name;
+            has_updated_name = true;
+        }
     };
     xhr.ontimeout = function() {
         schedule_fetch(0);

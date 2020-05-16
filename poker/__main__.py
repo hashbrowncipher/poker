@@ -1,4 +1,5 @@
 from gevent.monkey import patch_all
+
 patch_all()  # noqa: E402
 
 import logging
@@ -71,9 +72,9 @@ def route_bet(request: Request, name: str) -> Response:
 
 
 def main():
-    server = WSGIServer(('0.0.0.0', 6543), app)
+    server = WSGIServer(("0.0.0.0", 6543), app)
     server.serve_forever()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

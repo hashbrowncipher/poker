@@ -20,12 +20,10 @@ NOT_PRESENT = _NotPresent()
 NO_CHANGE = object()
 
 
-class _Consul():
+class _Consul:
     @staticmethod
     def delete(path):
-        resp = requests.delete(
-            f"http://{CONSUL_HTTP_ADDR}/v1/kv{path}",
-        )
+        resp = requests.delete(f"http://{CONSUL_HTTP_ADDR}/v1/kv{path}",)
         resp.raise_for_status()
         return resp.json()
 
@@ -38,11 +36,8 @@ class _Consul():
         if wait is not None:
             params["wait"] = wait
 
-        resp = requests.get(
-            f"http://{CONSUL_HTTP_ADDR}/v1/kv{path}",
-            params=params,
-        )
-        index = resp.headers['X-Consul-Index']
+        resp = requests.get(f"http://{CONSUL_HTTP_ADDR}/v1/kv{path}", params=params,)
+        index = resp.headers["X-Consul-Index"]
         logger.info("GET %s <- %s", path, resp.status_code)
 
         if resp.status_code == 404:
@@ -66,7 +61,7 @@ class _Consul():
         return resp.json()
 
 
-class ConsulKey():
+class ConsulKey:
     def __init__(self, path):
         self._path = path
 

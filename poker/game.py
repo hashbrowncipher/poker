@@ -15,9 +15,9 @@ logger = logging.getLogger(__name__)
 random = SystemRandom()
 
 # Deck management
-_NUMBERS = 'AKQJX98765432'
-_SUITS = 'SHCD'
-_CARDS = ''.join([number + suit for number, suit in product(_NUMBERS, _SUITS)])
+_NUMBERS = "AKQJX98765432"
+_SUITS = "SHCD"
+_CARDS = "".join([number + suit for number, suit in product(_NUMBERS, _SUITS)])
 
 
 class Stage(IntEnum):
@@ -37,7 +37,7 @@ REVEALED_CARDS = {
 
 def get_card(index):
     index *= 2
-    return _CARDS[index:index + 2]
+    return _CARDS[index : index + 2]
 
 
 class Player(BaseModel):
@@ -221,7 +221,7 @@ class Game(BaseModel):
 
     def _hole_cards_idx(self, idx):
         deck_index = idx * 4
-        return self.deck[deck_index: deck_index + 4]
+        return self.deck[deck_index : deck_index + 4]
 
     def hole_cards(self, session_id):
         idx = self._get_player_idx(session_id)
@@ -245,7 +245,8 @@ class Game(BaseModel):
                 continue
 
             yield player.session_id, (
-                player, community_cards + self._hole_cards_idx(idx)
+                player,
+                community_cards + self._hole_cards_idx(idx),
             )
 
     def pay_winners(self, room):
@@ -253,7 +254,9 @@ class Game(BaseModel):
         if len(final_hands) == 1:
             winning_players = list(final_hands.keys())
         else:
-            winners = get_winners((s_id, cards) for (s_id, (_, cards)) in final_hands.items())
+            winners = get_winners(
+                (s_id, cards) for (s_id, (_, cards)) in final_hands.items()
+            )
             logger.info("Winners:  %s", winners)
             winning_players = [s_id for (s_id, hand) in winners]
 
@@ -264,10 +267,9 @@ class Game(BaseModel):
             room.players[s_id].increment_balance(amount)
             self.pot -= amount
 
-        room.log.append(CompletedGame(
-            community_cards=self.community_cards,
-            players=dict(),
-        ))
+        room.log.append(
+            CompletedGame(community_cards=self.community_cards, players=dict(),)
+        )
 
         assert self.pot == 0
 
@@ -306,22 +308,16 @@ class Room(BaseModel):
             rotated_players = previous_game.players[1:] + previous_game.players[0:1]
             in_hand = [
                 PlayerInHand(session_id=player.session_id, bet=0)
-                for player in
-                rotated_players
+                for player in rotated_players
             ]
 
         cards_drawn = len(self.players) * 2 + 5
         number_deck = list(range(52))
         random.shuffle(number_deck)
 
-        deck = ''.join(get_card(card) for card in number_deck[:cards_drawn])
+        deck = "".join(get_card(card) for card in number_deck[:cards_drawn])
 
-        game = Game(
-            players=in_hand,
-            deck=deck,
-            pot=0,
-            stage=0,
-        )
+        game = Game(players=in_hand, deck=deck, pot=0, stage=0,)
         self.game = game
         game.initialize(self)
 
@@ -498,8 +494,7 @@ def _show_room(session_id, room_state):
     ret = PlayerRoomView(
         players=dict(
             (player.name, dict(balance=player.balance, session_id=s_id))
-            for s_id, player
-            in room_state.players.items()
+            for s_id, player in room_state.players.items()
         ),
         log=room_state.log,
     )
@@ -521,7 +516,7 @@ def _show_room(session_id, room_state):
 
     ret.game = PlayerGameView(
         pot=game.pot,
-        hole_cards=game.deck[deck_index: deck_index + 4],
+        hole_cards=game.deck[deck_index : deck_index + 4],
         community_cards=game.deck[community_start:community_end],
         players=[
             dict(
@@ -529,9 +524,9 @@ def _show_room(session_id, room_state):
                 bet=p.bet,
                 eligibility=p.eligibility,
                 has_option=p.has_option,
-            ) for p in
-            game.players
-        ]
+            )
+            for p in game.players
+        ],
     )
     return ret
 

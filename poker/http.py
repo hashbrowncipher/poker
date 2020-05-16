@@ -28,9 +28,9 @@ def _get_session_id(request):
 
 
 def route_spa(request, room_name):
-    return Response(SPA_CONTENTS, headers=(
-        ("Content-Type", "text/html; charset=utf-8"),
-    ))
+    return Response(
+        SPA_CONTENTS, headers=(("Content-Type", "text/html; charset=utf-8"),)
+    )
 
 
 def route_show_room(request, room_name) -> Response:
@@ -52,12 +52,14 @@ def route_bet(request, room_name) -> Response:
     game.register(room_name, request.session_id, data["amount"])
 
 
-url_map = Map([
-    Rule('/r/<room_name>', endpoint=route_spa),
-    Rule('/api/room/<room_name>', endpoint=route_show_room),
-    Rule('/api/room/<room_name>/bet', endpoint=route_bet),
-    Rule('/api/room/<room_name>/join', endpoint=route_join),
-])
+url_map = Map(
+    [
+        Rule("/r/<room_name>", endpoint=route_spa),
+        Rule("/api/room/<room_name>", endpoint=route_show_room),
+        Rule("/api/room/<room_name>/bet", endpoint=route_bet),
+        Rule("/api/room/<room_name>/join", endpoint=route_join),
+    ]
+)
 
 
 def identity_middleware(environ, start_response):
@@ -69,8 +71,7 @@ def identity_middleware(environ, start_response):
     response = dispatch(request)
     if not isinstance(response, Response):
         response = Response(
-            json.dumps(response),
-            headers=(("Content-Type", "application/json"),)
+            json.dumps(response), headers=(("Content-Type", "application/json"),)
         )
 
     cookie_header = dump_cookie(
@@ -78,7 +79,7 @@ def identity_middleware(environ, start_response):
         value=session_id.encode("ascii"),
         max_age=86400,
         httponly=True,
-        samesite="lax"
+        samesite="lax",
     )
     response.headers.add("Set-Cookie", cookie_header)
     return response(environ, start_response)

@@ -28,15 +28,15 @@ class Card(str):
     def value(self):
         # Alternatively we could encode cards in descending order across ASCII
         code = self[0]
-        if code == 'A':
+        if code == "A":
             return 12
-        if code == 'K':
+        if code == "K":
             return 11
-        if code == 'Q':
+        if code == "Q":
             return 10
-        if code == 'J':
+        if code == "J":
             return 9
-        if code == 'X':
+        if code == "X":
             return 8
         return ord(code) - 50
 
@@ -55,10 +55,10 @@ class Hand:
 
     def __init__(self, value, cards):
         self.value = value
-        self.cards = ''.join(cards)
+        self.cards = "".join(cards)
 
         if isinstance(cards, str):
-            cards = [Card(cards[i:i+2]) for i in range(0, len(cards), 2)]
+            cards = [Card(cards[i : i + 2]) for i in range(0, len(cards), 2)]
 
         self.sort_key = (self.value, [c.value for c in cards])
 
@@ -96,7 +96,7 @@ def get_flushes(value_groups: List[Card]):
 
 def get_straight(value_groups: List[Card]):
     for i in range(12, 2, -1):
-        bounds = range(i, i-5, -1)
+        bounds = range(i, i - 5, -1)
         if not all(value_groups[j] for j in bounds):
             continue
 
@@ -168,7 +168,7 @@ def _find_best_hand(cards):
 
 
 def find_best_hand(card_str):
-    cards = [Card(card_str[i:i+2]) for i in range(0, len(card_str), 2)]
+    cards = [Card(card_str[i : i + 2]) for i in range(0, len(card_str), 2)]
     return _find_best_hand(cards)
 
 

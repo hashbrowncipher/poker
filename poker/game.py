@@ -100,6 +100,7 @@ class Game(BaseModel):
         # By exiting the loop after seeing high bettor, we have already rotated the
         # players list into the appropriate position.
 
+        can_bet = 0
         for _, player in zip(self.players, player_loop):
             if player.eligibility is None:
                 continue
@@ -110,11 +111,14 @@ class Game(BaseModel):
             if player.bet < high_bettor.bet:
                 return player.session_id
 
+            can_bet += 1
+
         # All of the players are equal. Look for one with the option
 
-        for player in self.players:
-            if player.has_option and player.eligibility is not None:
-                return player.session_id
+        if can_bet >= 2:
+            for player in self.players:
+                if player.has_option and player.eligibility is not None:
+                    return player.session_id
 
         return None
 

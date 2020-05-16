@@ -236,3 +236,28 @@ def test_showdown_no_show():
     assert set(room.log[0].players.keys()) == set(("w",))
     # Should not have shown down
     assert room.log[0].players["w"].hand is None
+
+
+def test_fold_to_big_blind(monkeypatch):
+    monkeypatch.setattr(game, "random", Random(0))
+
+    game.delete_room("test")
+    game.register("test", "a", "blah a")
+    game.register("test", "b", "blah b")
+    game.register("test", "c", "other")
+
+    game.start("test", "a")
+    assert len(_room("test").get()[1].log) == 0
+
+    # Pre-flop
+    game.fold("test", "b")
+    assert _get_game("test").stage == 0
+    game.fold("test", "a")
+    assert _get_game("test").stage == 0
+
+    state = _get_game("test")
+
+    # Game should have ended
+    assert len(_room("test").get()[1].log) == 1
+    assert state.stage == 0
+    assert state.pot == 3

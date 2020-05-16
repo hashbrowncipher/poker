@@ -85,15 +85,21 @@ class Game(BaseModel):
 
     def get_next_to_act(self, balances):
         max_bet = 0
+        in_round = 0
 
         can_bet = []
         has_option = []
 
         # Iterate over all players who have never bet
         for player in self.players:
+            if player.bet > max_bet:
+                max_bet = player.bet
+
             if player.eligibility is None:
                 # player has folded
                 continue
+
+            in_round += 1
 
             if balances[player.session_id] == 0:
                 continue
@@ -102,10 +108,12 @@ class Game(BaseModel):
             if player.has_option:
                 has_option.append(player)
 
-            if player.bet > max_bet:
-                max_bet = player.bet
+        if not can_bet:
+            # Everyone is out of money
+            return None
 
-        if len(can_bet) < 2:
+        if in_round < 2:
+            # Everyone has folded
             return None
 
         # To account for blinds, we must take the smallest bet, not the first bet
@@ -117,6 +125,22 @@ class Game(BaseModel):
         # If all bets are equal, go in order of who has the option
         for player in has_option:
             return player.session_id
+
+    def _should_do_more_betting_rounds(self, balances):
+        """Given that the pot is good for this round, returns whether there should be
+        more betting action for this entire hand."""
+
+        # There must be two non-folded players.
+        count = 0
+        for player in self.players:
+            if player.eligibility is None:
+                continue
+
+            count += 1
+            if count == 2:
+                return True
+
+        return False
 
     def _finalize_betting(self, balances):
         # The pot is good. Calculate eligibility. A player's eligibility is equal to
@@ -161,6 +185,10 @@ class Game(BaseModel):
                 break
 
             if self.stage == Stage.RIVER:
+                break
+
+            if not self._should_do_more_betting_rounds(balances):
+                logger.info("Should not do more betting rounds")
                 break
 
             self.stage += 1

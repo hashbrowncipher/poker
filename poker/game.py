@@ -86,10 +86,11 @@ class Game(BaseModel):
     stage: int
     deck: str
 
-    def _finalize_betting(self, balances):
+    def get_next_to_act(self, balances):
         max_bet = 0
 
         can_bet = []
+        has_option = []
 
         # Iterate over all players who have never bet
         for player in self.players:
@@ -100,19 +101,24 @@ class Game(BaseModel):
             if balances[player.session_id] == 0:
                 continue
 
-            if player.has_option:
-                return player.session_id
-
             can_bet.append(player)
+            if player.has_option:
+                has_option.append(player)
+
             if player.bet > max_bet:
                 max_bet = player.bet
 
         if len(can_bet) > 1:
-            # Iterate again over players who are below the max bet
+            # Iterate over players who are below the max bet
             for player in can_bet:
                 if player.bet < max_bet:
                     return player.session_id
 
+            # If all bets are equal, go in order of who has the option
+            for player in has_option:
+                return player.session_id
+
+    def _finalize_betting(self, balances):
         # The pot is good. Calculate eligibility. A player's eligibility is equal to
         # the sum of the bets < theirs, plus their bet times the number of bets
         # >= theirs.
@@ -139,15 +145,16 @@ class Game(BaseModel):
 
     # Advances the game state machine
     def advance_state(self, room):
-        balances = dict((k, p.balance) for (k, p) in room.players.items())
+        balances = room.get_balances()
 
         while True:
-            next_to_act = self._finalize_betting(balances)
+            next_to_act = self.get_next_to_act(balances)
             if next_to_act is not None:
                 return
 
             # There is no next player to act. The pot is good.
 
+            self._finalize_betting(balances)
             if self.stage == Stage.RIVER:
                 break
 
@@ -298,6 +305,9 @@ class Room(BaseModel):
     small_blind: int = 1
     log: List[CompletedGame]
 
+    def get_balances(self):
+        return dict((k, p.balance) for (k, p) in self.players.items())
+
     def player(self, session_id):
         return self.players[session_id]
 
@@ -438,6 +448,7 @@ def fold(name: str, session_id: str):
 
 
 class PlayerGameView(BaseModel):
+    next_to_act: str
     pot: int
     hole_cards: str
     community_cards: str
@@ -520,14 +531,16 @@ def _show_room(session_id, room_state):
     deck_index = idx * 4
     community_start = len(game.players) * 4
     community_end = community_start + REVEALED_CARDS[game.stage] * 2
+    next_to_act = game.get_next_to_act(room_state.get_balances())
 
     ret.game = PlayerGameView(
+        next_to_act=room_state.player(next_to_act).name,
         pot=game.pot,
         hole_cards=game.deck[deck_index : deck_index + 4],
         community_cards=game.deck[community_start:community_end],
         players=[
             dict(
-                name=room_state.players[p.session_id].name,
+                name=room_state.player(p.session_id).name,
                 bet=p.bet,
                 eligibility=p.eligibility,
                 has_option=p.has_option,

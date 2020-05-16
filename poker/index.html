@@ -77,6 +77,64 @@ function pretty_print(input) {
     return PR.prettyPrintOne(p.innerHTML, "js");
 }
 
+function show_cards(elem, value) {
+    elem.innerHTML = "";
+    for(var i = 0; i < value.length; i+=2) {
+        var out = document.createElement("span");
+
+        var qty = value.charAt(i);
+        var suit = value.charAt(i + 1);
+
+        var codepoint = 0x1F0A0;
+        switch(qty) {
+            case 'A':
+                codepoint += 0x1;
+                break;
+            case 'K':
+                codepoint += 0xE;
+                break;
+            case 'Q':
+                codepoint += 0xD;
+                break;
+            case 'J':
+                codepoint += 0xB;
+                break;
+            case 'X':
+                codepoint += 0xA;
+                break
+            default:
+                codepoint += qty.charCodeAt(0) - 0x30;
+        }
+
+        var color = "blue";
+        switch(suit) {
+            case 'H':
+                codepoint += 0x10;
+                color = "hotpink";
+                break;
+            case 'D':
+                codepoint += 0x20;
+                color = "crimson";
+                break;
+            case "C":
+                codepoint += 0x30;
+                color = "black";
+                break
+        }
+        out.style.color = color;
+        out.innerText = String.fromCodePoint(codepoint);
+        console.log(codepoint)
+        elem.appendChild(out);
+    }
+}
+
+function start_game() {
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", "/api/room/" + room_name + "/start");
+    xhr.send();
+}
+
+
 function fetch_state() {
     var xhr = new XMLHttpRequest();
     xhr.onload = function() {
@@ -97,8 +155,8 @@ function fetch_state() {
         var game = response.room.game;
         if(game != null) {
             var game = response.room.game;
-            hole_cards_elem.innerText = game.hole_cards;
-            community_cards_elem.innerText = game.community_cards;
+            show_cards(hole_cards_elem, game.hole_cards);
+            show_cards(community_cards_elem, game.community_cards);
         }
 
         game_elem.innerHTML = pretty_print(response.room.game);

@@ -46,12 +46,9 @@ class Player(BaseModel):
     pending_balance: int
 
     def decrement_balance(self, value):
-        if self.balance >= value:
-            self.balance -= value
-            return value
-        else:
-            ret = self.balance
-            return ret
+        value = min(self.balance, value)
+        self.balance -= value
+        return value
 
     def increment_balance(self, value):
         self.balance += value
@@ -474,50 +471,6 @@ class PlayerGameView(BaseModel):
     community_cards: str
     players: list
 
-    @staticmethod
-    def _convert_to_unicode(cards):
-        cards = iter(cards)
-        while True:
-            out = 0x1F0A0
-            try:
-                value = next(cards)
-            except StopIteration:
-                break
-
-            if value == "A":
-                out += 1
-            elif value == "K":
-                out += 0xE
-            elif value == "Q":
-                out += 0xD
-            elif value == "J":
-                out += 0xB
-            elif value == "X":
-                out += 0xA
-            else:
-                out += ord(value) - 0x30
-
-            suit = next(cards)
-            if suit == "H":
-                out += 0x10
-            elif suit == "D":
-                out += 0x20
-            elif suit == "C":
-                out += 0x30
-
-            yield chr(out)
-
-    @classmethod
-    def convert_to_unicode(cls, cards):
-        return "".join(cls._convert_to_unicode(cards))
-
-    def dict(self, *args, **kwargs):
-        # Nasty hack that keeps tests passing
-        val = super().dict(*args, **kwargs)
-        val["hole_cards"] = self.convert_to_unicode(val["hole_cards"])
-        val["community_cards"] = self.convert_to_unicode(val["community_cards"])
-        return val
-
 
 class PlayerRoomView(BaseModel):
     players: Dict[str, dict]
@@ -525,41 +478,25 @@ class PlayerRoomView(BaseModel):
     log: List[CompletedGame]
 
 
-def _show_room(session_id, room_state):
-    if room_state is NOT_PRESENT:
-        return None
-
-    for game in room_state.log:
-        game.players = dict(
-            (room_state.get_name(session_id), result)
-            for (session_id, result) in game.players.items()
-        )
-
-    ret = PlayerRoomView(
-        players=dict(
-            (player.name, dict(balance=player.balance))
-            for s_id, player in room_state.players.items()
-        ),
-        log=room_state.log,
-    )
-
-    if room_state.game is None:
-        return ret
-
+def _get_game_view(session_id, room_state):
     game = room_state.game
+    if game is None:
+        return None
 
     for idx, player in enumerate(game.players):
         if player.session_id == session_id:
             break
     else:
-        raise KeyError("Cannot find session_id")
+        # Player is not in this game
+        # They are "in the waiting room"
+        return None
 
     deck_index = idx * 4
     community_start = len(game.players) * 4
     community_end = community_start + REVEALED_CARDS[game.stage] * 2
     next_to_act = game.get_next_to_act(room_state.get_balances())
 
-    ret.game = PlayerGameView(
+    return PlayerGameView(
         next_to_act=room_state.player(next_to_act).name,
         pot=game.pot,
         hole_cards=game.deck[deck_index : deck_index + 4],
@@ -574,7 +511,26 @@ def _show_room(session_id, room_state):
             for p in game.players
         ],
     )
-    return ret
+
+
+def _show_room(session_id, room_state):
+    if room_state is NOT_PRESENT:
+        return None
+
+    for game in room_state.log:
+        game.players = dict(
+            (room_state.get_name(session_id), result)
+            for (session_id, result) in game.players.items()
+        )
+
+    return PlayerRoomView(
+        players=dict(
+            (player.name, dict(balance=player.balance))
+            for s_id, player in room_state.players.items()
+        ),
+        log=room_state.log,
+        game=_get_game_view(session_id, room_state),
+    )
 
 
 def show_room(room_name: str, session_id: str, query_index: str):

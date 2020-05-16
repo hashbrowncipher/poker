@@ -1,90 +1,133 @@
 <!DOCTYPE html>
 <html>
-	<head>
-  <script src="https://cdn.jsdelivr.net/gh/google/code-prettify@master/loader/run_prettify.js"></script>
-	</head>
-	<body>
-		<p>
-		Name: <input id="player_name" type="text">
-		</p>
-		<p>
-		Bet: <input id="bet" type="text">
-		</p>
-		<pre id="state" />
-		<script type="text/javascript">
+    <head>
+        <script src="https://cdn.jsdelivr.net/gh/google/code-prettify@master/loader/run_prettify.js"></script>
+<style>
+.room {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-gap: 10px;
+  grid-auto-flow: column dense;
+  grid-auto-rows: minmax(20px, auto);
+}
+.name {
+  font-size: xx-large;
+  grid-column: 1 / 5;
+  grid-row: 1;
+  border-bottom: 2px solid black;
+  padding-bottom: 2px;
+}
+.hand {
+  grid-column: 1 / 3;
+  grid-row: 2 / 6;
+}
+.players {
+  grid-column: 4;
+  grid-row: 2 / 6;
+}
+.log{
+  grid-column: 3 / 4;
+  grid-row: 2 / 6;
+}
+</style>
+    </head>
+    <body>
+        <div class="room">
+            <div class="name">
+                Welcome <input id="player_name" type="text" value="Enter your Name" style="font-size: xx-large"> to Poker!
+            </div>
+            <div class="hand">
+				<h2>Current Hand</h2>
+                <b>Your Bet:</b> <input id="bet" type="text">
+                <pre id="game" />
+            </div>
+            <div class="log">
+                <h2>Game Log </h3>
+                <pre id="log" />
+            </div>
+            <div class="players">
+				<h2>Players In Room</h3>
+                <pre id="players" />
+            </div>
+        </div>
+        <script type="text/javascript">
 "use strict";
 var room_name = location.pathname.split("/").pop();
-var state_elem = document.getElementById("state");
+var game_elem = document.getElementById("game");
+var players_elem = document.getElementById("players");
+var log_elem = document.getElementById("log");
+var name_elem = document.getElementById("player_name");
 var seen_room = false;
 var fetch_handle = null;
 var next_index = "0";
 
 function schedule_fetch(timeout) {
-	clearTimeout(fetch_handle);
-	fetch_handle = setTimeout(fetch_state, timeout);
+    clearTimeout(fetch_handle);
+    fetch_handle = setTimeout(fetch_state, timeout);
 }
 
 function fetch_state() {
-	var xhr = new XMLHttpRequest();
-	xhr.onload = function() {
-		if(xhr.status != 200) {
-			setTimeout(fetch_state, 10000);
-			return;
-		}
-		var response = JSON.parse(xhr.responseText);
-		next_index = response["index"];
+    var xhr = new XMLHttpRequest();
+    xhr.onload = function() {
+        if(xhr.status != 200) {
+            setTimeout(fetch_state, 10000);
+            return;
+        }
+        var response = JSON.parse(xhr.responseText);
+        next_index = response["index"];
 
-		state_elem.innerHTML = PR.prettyPrintOne(JSON.stringify(response["room"], undefined, 2), "js");
-		schedule_fetch(0);
-	};
-	xhr.ontimeout = function() {
-		schedule_fetch(0);
-	};
-	xhr.open("GET", "/api/room/" + room_name + "?index=" + next_index);
-	xhr.timeout = 120000;
-	xhr.send();
+        game_elem.innerHTML = PR.prettyPrintOne(JSON.stringify(response.room.game, undefined, 2), "js");
+        players_elem.innerHTML = PR.prettyPrintOne(JSON.stringify(response.room.players, undefined, 2), "js");
+        log_elem.innerHTML = PR.prettyPrintOne(JSON.stringify(response.room.log, undefined, 2), "js");
+        schedule_fetch(0);
+    };
+    xhr.ontimeout = function() {
+        schedule_fetch(0);
+    };
+    xhr.open("GET", "/api/room/" + room_name + "?index=" + next_index);
+    xhr.timeout = 120000;
+    xhr.send();
 }
 fetch_state();
 
 var bet_input = document.getElementById("bet");
 bet_input.addEventListener("keyup", function(event) {
-	if(event.keyCode != 13) {
-		return;
-	}
-	var xhr = new XMLHttpRequest();
-	var payload = undefined;
+    if(event.keyCode != 13) {
+        return;
+    }
+    var xhr = new XMLHttpRequest();
+    var payload = undefined;
 
-	if(bet_input.value.trim() == "fold") {
-		xhr.open("POST", "/api/room/" + room_name + "/fold");
-	} else {
-		var amount = parseInt(bet_input.value);
-		payload = JSON.stringify({"amount": amount});
-		xhr.open("POST", "/api/room/" + room_name + "/bet");
-	}
+    if(bet_input.value.trim() == "fold") {
+        xhr.open("POST", "/api/room/" + room_name + "/fold");
+    } else {
+        var amount = parseInt(bet_input.value);
+        payload = JSON.stringify({"amount": amount});
+        xhr.open("POST", "/api/room/" + room_name + "/bet");
+    }
 
-	xhr.setRequestHeader("Content-Type", "application/json");
-	xhr.send(payload);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.send(payload);
 });
 
 var name_input = document.getElementById("player_name");
 name_input.addEventListener("keyup", function(event) {
-	if(event.keyCode != 13) {
-		return;
-	}
-	var xhr = new XMLHttpRequest();
-	xhr.onload = function() {
-		if(xhr.status != 200) {
-			alert(xhr.responseText);
-			return;
-		}
-	};
+    if(event.keyCode != 13) {
+        return;
+    }
+    var xhr = new XMLHttpRequest();
+    xhr.onload = function() {
+        if(xhr.status != 200) {
+            alert(xhr.responseText);
+            return;
+        }
+    };
 
-	xhr.open("POST", "/api/room/" + room_name + "/join");
-	var payload = JSON.stringify({"name": name_input.value});
-	xhr.setRequestHeader("Content-Type", "application/json");
-	xhr.send(payload);
+    xhr.open("POST", "/api/room/" + room_name + "/join");
+    var payload = JSON.stringify({"name": name_input.value});
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.send(payload);
 });
-
-		</script>
-	</body>
+        </script>
+    </body>
 </html>

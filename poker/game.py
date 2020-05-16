@@ -477,9 +477,9 @@ class PlayerGameView(BaseModel):
 
             yield chr(out)
 
-    def dict(self):
+    def dict(self, *args, **kwargs):
         # Nasty hack that keeps tests passing
-        val = super().dict()
+        val = super().dict(*args, **kwargs)
         val["hole_cards"] = str(self._convert_to_unicode(val["hole_cards"]))
         val["community_cards"] = str(self._convert_to_unicode(val["community_cards"]))
         return val

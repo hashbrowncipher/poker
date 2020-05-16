@@ -168,10 +168,16 @@ function fetch_state() {
         }
 
         var game = response.room.game;
-        if(game != null) {
+        if (game != null) {
             var game = response.room.game;
             show_cards(hole_cards_elem, game.hole_cards);
             show_cards(community_cards_elem, game.community_cards);
+            delete game.hole_cards;
+            delete game.community_cards;
+        }
+
+        if (response.room.name != null) {
+            name_elem.value = response.room.name;
         }
 
         game_elem.innerHTML = pretty_print(response.room.game);

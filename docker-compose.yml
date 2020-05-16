@@ -5,7 +5,7 @@ services:
   python:
     build: ./docker
     volumes:
-    - ./poker:/usr/src/poker
+    - ./poker:/usr/src/poker:ro
     ports:
     - "6543:6543"
     working_dir: /usr/src

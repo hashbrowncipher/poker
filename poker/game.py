@@ -115,7 +115,7 @@ class Game(BaseModel):
         # beneath the max_bet.
         smallest_bettor = min(can_bet, key=lambda player: player.bet)
         if smallest_bettor.bet < max_bet:
-            return smallest_bettor
+            return smallest_bettor.session_id
 
         # If all bets are equal, go in order of who has the option
         for player in has_option:
@@ -195,7 +195,7 @@ class Game(BaseModel):
         bettor.has_option = False
 
     def bet(self, room, session_id, value, lt_ok=False):
-        if session_id != self.get_next_to_act(room):
+        if session_id != self.get_next_to_act(room.get_balances()):
             return
 
         bettor = self.get_player(session_id)
@@ -388,6 +388,9 @@ def register(room_name: str, session_id: str, player_name: str):
     def mutate(state):
         if state is NOT_PRESENT:
             state = Room(players=dict(), small_blind=1, log=[])
+
+        if len(player_name) > 64:
+            raise CannotRegister("Your name is tooooooo lonnnnng.")
 
         for key, player in state.players.items():
             if key == session_id:

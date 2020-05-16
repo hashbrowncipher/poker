@@ -1,6 +1,6 @@
-from uuid import uuid4
 import json
 import logging
+import os
 from importlib.resources import open_binary
 
 from werkzeug.exceptions import HTTPException
@@ -10,21 +10,34 @@ from werkzeug.routing import Rule
 from werkzeug.wrappers import Request
 from werkzeug.wrappers import Response
 
+from base64 import urlsafe_b64encode
+from hashlib import sha256
+
 from poker import game
 
 with open_binary("poker", "index.html") as fh:
     SPA_CONTENTS = fh.read()
 
 logger = logging.getLogger(__name__)
+COOKIE_KEY = "id"
 
 
-def _get_session_id(request):
+def base64url(b):
+    return urlsafe_b64encode(b).split(b"=")[0].decode("ascii")
+
+
+def hash_cookie_id(s):
+    hashed = sha256(s.encode("utf-8")).digest()[:16]
+    return base64url(hashed)
+
+
+def _get_cookie_id(request):
     try:
-        return request.cookies["session_id"]
+        return request.cookies[COOKIE_KEY]
     except KeyError:
         pass
 
-    return str(uuid4())
+    return base64url(os.urandom(16))
 
 
 def route_spa(request, room_name):
@@ -74,12 +87,8 @@ url_map = Map(
 
 def identity_middleware(environ, start_response):
     request = Request(environ)
-    session_id = _get_session_id(request)
-
-    # TODO: hash these before sending them into the logic layer
-    # right now we're storing bearer tokens in the database: a no-no.
-    # SHA256 or Blake3 will do nicely.
-    request.session_id = session_id
+    cookie_id = _get_cookie_id(request)
+    request.session_id = hash_cookie_id(cookie_id)
 
     response = dispatch(request)
     if not isinstance(response, Response):
@@ -88,8 +97,8 @@ def identity_middleware(environ, start_response):
         )
 
     cookie_header = dump_cookie(
-        key="session_id",
-        value=session_id.encode("ascii"),
+        key=COOKIE_KEY,
+        value=cookie_id.encode("ascii"),
         max_age=86400,
         httponly=True,
         samesite="lax",

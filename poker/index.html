@@ -76,21 +76,30 @@ function pretty_print(input) {
 function fetch_state() {
     var xhr = new XMLHttpRequest();
     xhr.onload = function() {
-        if(xhr.status != 200) {
-            setTimeout(fetch_state, 10000);
+        var content_type = xhr.getResponseHeader("Content-Type");
+        if(!content_type.startsWith("application/json")) {
+            // If it's not valid JSON, give the server time to breathe.
+            schedule_fetch(10000);
             return;
         }
         var response = JSON.parse(xhr.responseText);
         next_index = response["index"];
+        schedule_fetch(0);
+
+        if(xhr.status != 200) {
+            return;
+        }
 
         game_elem.innerHTML = pretty_print(response.room.game);
         players_elem.innerHTML = pretty_print(response.room.players);
         log_elem.innerHTML = pretty_print(response.room.log);
-        schedule_fetch(0);
     };
     xhr.ontimeout = function() {
         schedule_fetch(0);
     };
+    xhr.onerror = function() {
+        schedule_fetch(10000);
+    }
     xhr.open("GET", "/api/room/" + room_name + "?index=" + next_index);
     xhr.timeout = 120000;
     xhr.send();

@@ -56,6 +56,10 @@ def route_fold(request, room_name) -> Response:
     game.fold(room_name, request.session_id)
 
 
+def route_start(request, room_name) -> Response:
+    game.start(room_name, request.session_id)
+
+
 url_map = Map(
     [
         Rule("/r/<room_name>", endpoint=route_spa),
@@ -63,6 +67,7 @@ url_map = Map(
         Rule("/api/room/<room_name>/bet", endpoint=route_bet),
         Rule("/api/room/<room_name>/fold", endpoint=route_fold),
         Rule("/api/room/<room_name>/join", endpoint=route_join),
+        Rule("/api/room/<room_name>/start", endpoint=route_start),
     ]
 )
 

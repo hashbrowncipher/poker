@@ -305,6 +305,9 @@ class Room(BaseModel):
     small_blind: int = 1
     log: List[CompletedGame]
 
+    def get_name(self, session_id):
+        return self.players[session_id].name
+
     def get_balances(self):
         return dict((k, p.balance) for (k, p) in self.players.items())
 
@@ -509,9 +512,15 @@ def _show_room(session_id, room_state):
     if room_state is NOT_PRESENT:
         return None
 
+    for game in room_state.log:
+        game.players = dict(
+            (room_state.get_name(session_id), result)
+            for (session_id, result) in game.players.items()
+        )
+
     ret = PlayerRoomView(
         players=dict(
-            (player.name, dict(balance=player.balance, session_id=s_id))
+            (player.name, dict(balance=player.balance))
             for s_id, player in room_state.players.items()
         ),
         log=room_state.log,

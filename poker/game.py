@@ -129,6 +129,8 @@ class Game(BaseModel):
         bets_above = len(self.players)
         bets = sorted(self.players, key=lambda x: x.bet)
 
+        players_in = 0
+
         for player in bets:
             round_bet = player.bet
 
@@ -136,15 +138,16 @@ class Game(BaseModel):
             player.bet = 0
             player.has_option = True
 
+            # TODO: I'm not sure eligibility is doing us any good.
+            # It may be better to track the amount a player has paid into the pot.
             if player.eligibility is not None:
                 player.eligibility += cumulative + round_bet * bets_above
+                players_in += 1
 
             cumulative += round_bet
             bets_above -= 1
 
-        # None signifies that the pot is good and we're ready to move to the next
-        # round.
-        return None
+        return players_in
 
     # Advances the game state machine
     def advance_state(self, room):
@@ -156,8 +159,10 @@ class Game(BaseModel):
                 return
 
             # There is no next player to act. The pot is good.
+            if self._finalize_betting(balances) < 2:
+                # Everyone folded.
+                break
 
-            self._finalize_betting(balances)
             if self.stage == Stage.RIVER:
                 break
 

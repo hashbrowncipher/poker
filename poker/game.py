@@ -250,6 +250,11 @@ class Game(BaseModel):
             )
 
     def pay_winners(self, room):
+        completed_game = CompletedGame(
+            community_cards=self.community_cards, players=dict()
+        )
+        room.log.append(completed_game)
+
         final_hands = dict(self._get_final_hands())
         if len(final_hands) == 1:
             winning_players = list(final_hands.keys())
@@ -264,12 +269,9 @@ class Game(BaseModel):
             # FIXME: definitely doesn't handle side-pots correctly.
             player, _ = final_hands[s_id]
             amount = player.eligibility
+            completed_game.players[s_id] = PlayerAfterGame(hand=None, payout=amount)
             room.players[s_id].increment_balance(amount)
             self.pot -= amount
-
-        room.log.append(
-            CompletedGame(community_cards=self.community_cards, players=dict(),)
-        )
 
         assert self.pot == 0
 
@@ -294,7 +296,7 @@ class Room(BaseModel):
     players: Dict[str, Player]
 
     small_blind: int = 1
-    log: List[CompletedGame] = []
+    log: List[CompletedGame]
 
     def player(self, session_id):
         return self.players[session_id]
@@ -361,7 +363,7 @@ def register(room_name: str, session_id: str, player_name: str):
 
     def mutate(state):
         if state is NOT_PRESENT:
-            state = Room(players=dict(), small_blind=1)
+            state = Room(players=dict(), small_blind=1, log=[])
 
         for key, player in state.players.items():
             if key == session_id:

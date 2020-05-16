@@ -1,5 +1,6 @@
 from poker import game
 from poker.game import _get_game
+from poker.game import _room
 from random import Random
 
 
@@ -15,6 +16,7 @@ def test_play_hand(monkeypatch):
     assert view_a.game is None
 
     game.start("test", "a")
+    assert len(_room("test").get()[1].log) == 0
     deck = _get_game("test").deck
 
     view_a = game.get_player_view("test", "a")
@@ -81,6 +83,7 @@ def test_play_hand(monkeypatch):
     # Payout
 
     state = _get_game("test")
+    assert len(_room("test").get()[1].log) == 1
     assert state.stage == 0
     assert state.pot == 3
     assert state.players[0].session_id == "c"

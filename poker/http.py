@@ -76,6 +76,9 @@ def identity_middleware(environ, start_response):
     request = Request(environ)
     session_id = _get_session_id(request)
 
+    # TODO: hash these before sending them into the logic layer
+    # right now we're storing bearer tokens in the database: a no-no.
+    # SHA256 or Blake3 will do nicely.
     request.session_id = session_id
 
     response = dispatch(request)

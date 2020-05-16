@@ -66,6 +66,13 @@ function schedule_fetch(timeout) {
     fetch_handle = setTimeout(fetch_state, timeout);
 }
 
+function pretty_print(input) {
+    var text = document.createTextNode(JSON.stringify(input, undefined, 2));
+    var p = document.createElement("p");
+    p.appendChild(text)
+    return PR.prettyPrintOne(p.innerHTML, "js");
+}
+
 function fetch_state() {
     var xhr = new XMLHttpRequest();
     xhr.onload = function() {
@@ -76,9 +83,9 @@ function fetch_state() {
         var response = JSON.parse(xhr.responseText);
         next_index = response["index"];
 
-        game_elem.innerHTML = PR.prettyPrintOne(JSON.stringify(response.room.game, undefined, 2), "js");
-        players_elem.innerHTML = PR.prettyPrintOne(JSON.stringify(response.room.players, undefined, 2), "js");
-        log_elem.innerHTML = PR.prettyPrintOne(JSON.stringify(response.room.log, undefined, 2), "js");
+        game_elem.innerHTML = pretty_print(response.room.game);
+        players_elem.innerHTML = pretty_print(response.room.players);
+        log_elem.innerHTML = pretty_print(response.room.log);
         schedule_fetch(0);
     };
     xhr.ontimeout = function() {

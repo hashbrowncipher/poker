@@ -49,7 +49,11 @@ def route_join(request, room_name) -> Response:
 
 def route_bet(request, room_name) -> Response:
     data = json.load(request.stream)
-    game.register(room_name, request.session_id, data["amount"])
+    game.add_bet(room_name, request.session_id, data["amount"])
+
+
+def route_fold(request, room_name) -> Response:
+    game.fold(room_name, request.session_id)
 
 
 url_map = Map(
@@ -57,6 +61,7 @@ url_map = Map(
         Rule("/r/<room_name>", endpoint=route_spa),
         Rule("/api/room/<room_name>", endpoint=route_show_room),
         Rule("/api/room/<room_name>/bet", endpoint=route_bet),
+        Rule("/api/room/<room_name>/fold", endpoint=route_fold),
         Rule("/api/room/<room_name>/join", endpoint=route_join),
     ]
 )

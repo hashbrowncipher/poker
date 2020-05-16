@@ -51,10 +51,17 @@ bet_input.addEventListener("keyup", function(event) {
 	if(event.keyCode != 13) {
 		return;
 	}
-	var amount = parseInt(bet_input.value);
 	var xhr = new XMLHttpRequest();
-	xhr.open("POST", "/api/room/" + room_name + "/bet");
-	var payload = JSON.stringify({"amount": amount});
+	var payload = undefined;
+
+	if(bet_input.value.trim() == "fold") {
+		xhr.open("POST", "/api/room/" + room_name + "/fold");
+	} else {
+		var amount = parseInt(bet_input.value);
+		payload = JSON.stringify({"amount": amount});
+		xhr.open("POST", "/api/room/" + room_name + "/bet");
+	}
+
 	xhr.setRequestHeader("Content-Type", "application/json");
 	xhr.send(payload);
 });

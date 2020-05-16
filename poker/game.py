@@ -539,7 +539,6 @@ class PlayerGameView(BaseModel):
 
 
 class PlayerRoomView(BaseModel):
-    name: Optional[str]
     players: Dict[str, dict]
     game: Optional[PlayerGameView]
     log: List[CompletedGame]
@@ -590,9 +589,7 @@ def _show_room(session_id, room_state):
             for (session_id, result) in game.players.items()
         )
 
-    myself = room_state.players.get(session_id, None)
     return PlayerRoomView(
-        name=myself.name if myself else None,
         players=dict(
             (player.name, dict(balance=player.balance))
             for s_id, player in room_state.players.items()

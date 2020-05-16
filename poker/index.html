@@ -74,7 +74,6 @@ var game_elem = document.getElementById("game");
 var players_elem = document.getElementById("players");
 var log_elem = document.getElementById("log");
 var name_elem = document.getElementById("player_name");
-var has_updated_name = false;
 var hole_cards_elem = document.getElementById("hole_cards");
 var community_cards_elem = document.getElementById("community_cards");
 var seen_room = false;
@@ -168,20 +167,16 @@ function fetch_state() {
             return;
         }
 
-        var room = response.room;
+        var game = response.room.game;
         if(game != null) {
-            var game = room.game;
+            var game = response.room.game;
             show_cards(hole_cards_elem, game.hole_cards);
             show_cards(community_cards_elem, game.community_cards);
         }
 
-        game_elem.innerHTML = pretty_print(room.game);
-        players_elem.innerHTML = pretty_print(room.players);
-        log_elem.innerHTML = pretty_print(room.log);
-        if(!has_updated_name && room.name != null) {
-            name_elem.value = response.room.name;
-            has_updated_name = true;
-        }
+        game_elem.innerHTML = pretty_print(response.room.game);
+        players_elem.innerHTML = pretty_print(response.room.players);
+        log_elem.innerHTML = pretty_print(response.room.log);
     };
     xhr.ontimeout = function() {
         schedule_fetch(0);

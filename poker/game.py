@@ -1,5 +1,6 @@
 import logging
 from random import SystemRandom
+from itertools import cycle
 from pydantic import BaseModel
 from typing import Dict
 from typing import Optional
@@ -85,47 +86,34 @@ class Game(BaseModel):
     deck: str
 
     def get_next_to_act(self, balances):
-        max_bet = 0
-        in_round = 0
+        player_loop = cycle(self.players)
 
-        can_bet = []
-        has_option = []
+        # Find the highest bettor
+        high_bettor = next(player_loop)
+        for player in player_loop:
+            if player is high_bettor:
+                if player.has_option:
+                    return player.session_id
 
-        # Iterate over all players who have never bet
-        for player in self.players:
-            if player.bet > max_bet:
-                max_bet = player.bet
+                break
 
+            if player.bet > high_bettor.bet:
+                high_bettor = player
+
+        # By exiting the loop after seeing high bettor, we have already rotated the
+        # players list into the appropriate position.
+
+        for _, player in zip(self.players, player_loop):
             if player.eligibility is None:
-                # player has folded
                 continue
-
-            in_round += 1
 
             if balances[player.session_id] == 0:
                 continue
 
-            can_bet.append(player)
-            if player.has_option:
-                has_option.append(player)
+            if player.bet < high_bettor.bet or player.has_option:
+                return player.session_id
 
-        if not can_bet:
-            # Everyone is out of money
-            return None
-
-        if in_round < 2:
-            # Everyone has folded
-            return None
-
-        # To account for blinds, we must take the smallest bet, not the first bet
-        # beneath the max_bet.
-        smallest_bettor = min(can_bet, key=lambda player: player.bet)
-        if smallest_bettor.bet < max_bet:
-            return smallest_bettor.session_id
-
-        # If all bets are equal, go in order of who has the option
-        for player in has_option:
-            return player.session_id
+        return None
 
     def _should_do_more_betting_rounds(self, balances):
         """Given that the pot is good for this round, returns whether there should be

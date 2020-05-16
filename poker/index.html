@@ -25,7 +25,7 @@
   grid-column: 1;
   grid-row: 3;
 }
-.handstate {
+.gamestate {
   grid-column: 2 / 4;
   grid-row: 2 / 6;
 }
@@ -33,9 +33,26 @@
   grid-column: 4;
   grid-row: 2 / 3;
 }
-.log{
+.log {
   grid-column: 4;
   grid-row: 3 / 6;
+}
+.active {
+  animation:blinkingText 1.2s infinite;
+}
+@keyframes blinkingText{
+    0%{     color: #000;    }
+    49%{    color: #000; }
+    60%{    color: transparent; }
+    99%{    color:transparent;  }
+    100%{   color: #000;    }
+}
+
+table, th, td {
+  border: 1px solid black;
+}
+th, td {
+  padding: 6px;
 }
 </style>
     </head>
@@ -54,7 +71,7 @@
                 <span style="font-size: 800%">
                 <span id="community_cards">
             </div>
-            <div class="handstate" style="font-size: 200%">
+            <div class="gamestate" style="font-size: 200%">
                 Your Bet: <input id="bet" type="text">
                 <pre id="game" />
             </div>
@@ -90,6 +107,58 @@ function pretty_print(input) {
     var p = document.createElement("p");
     p.appendChild(text)
     return PR.prettyPrintOne(p.innerHTML, "js");
+}
+
+function addHeader(row, value) {
+    const header = document.createElement("th");
+    header.innerHTML = value;
+    row.appendChild(header);
+}
+
+function show_gamestate(elem, value) {
+    elem.innerHTML ="";
+    var newTable = document.createElement("table");
+    newTable.className = "tbl";
+
+    /*
+    var nextToAct = newTable.insertRow();
+    addHeader(nextToAct, "Next to Act")
+    nextToAct.insertCell().innerHTML = value.next_to_act;
+    */
+
+    var pot = newTable.insertRow();
+    addHeader(pot, "Pot Value")
+    pot.insertCell().innerHTML = value.pot;
+
+
+    elem.appendChild(newTable);
+
+    var playerTable = document.createElement("table");
+    playerTable.className = "tbl";
+
+    var name = playerTable.insertRow();
+    addHeader(name, "Player");
+    addHeader(name, "Current Bet");
+
+    for (var i = 0; i < value.players.length; i++) {
+        var player = value.players[i];
+        var row = playerTable.insertRow();
+        var cell = row.insertCell(0);
+        if (player.name == value.next_to_act) {
+            cell.innerHTML = "<span class='active'>" + player.name + "</span>";
+        } else {
+            cell.innerHTML = player.name;
+        }
+
+        cell = row.insertCell(1);
+        if (player.eligibility == null) {
+            cell.innerHTML = "fold";
+        } else {
+            cell.innerHTML = player.bet;
+        }
+    }
+
+    elem.appendChild(playerTable);
 }
 
 function show_cards(elem, value) {
@@ -180,7 +249,9 @@ function fetch_state() {
             name_elem.value = response.room.name;
         }
 
-        game_elem.innerHTML = pretty_print(response.room.game);
+        show_gamestate(game_elem, game)
+
+        ///game_elem.innerHTML = pretty_print(response.room.game);
         players_elem.innerHTML = pretty_print(response.room.players);
         log_elem.innerHTML = pretty_print(response.room.log);
     };

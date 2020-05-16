@@ -92,9 +92,6 @@ class Game(BaseModel):
         high_bettor = next(player_loop)
         for player in player_loop:
             if player is high_bettor:
-                if player.has_option:
-                    return player.session_id
-
                 break
 
             if player.bet > high_bettor.bet:
@@ -110,7 +107,13 @@ class Game(BaseModel):
             if balances[player.session_id] == 0:
                 continue
 
-            if player.bet < high_bettor.bet or player.has_option:
+            if player.bet < high_bettor.bet:
+                return player.session_id
+
+        # All of the players are equal. Look for one with the option
+
+        for player in self.players:
+            if player.has_option and player.eligibility is not None:
                 return player.session_id
 
         return None

@@ -194,20 +194,23 @@ class Game(BaseModel):
         bettor.eligibility = None
         bettor.has_option = False
 
-    def bet(self, room, session_id, value, lt_ok=False):
-        if session_id != self.get_next_to_act(room.get_balances()):
-            return
-
+    def _bet(self, room, session_id, value):
         bettor = self.get_player(session_id)
         needed = value - bettor.bet
         if needed < 0:
-            return
+            return None
 
         got = room.players[bettor.session_id].decrement_balance(needed)
         bettor.bet += got
         bettor.has_option = False
         self.pot += got
         return got
+
+    def bet(self, room, session_id, value, lt_ok=False):
+        if session_id != self.get_next_to_act(room.get_balances()):
+            return None
+
+        self._bet(room, session_id, value)
 
     @property
     def big_blind(self):
@@ -230,8 +233,8 @@ class Game(BaseModel):
 
         # TODO: handle insolvency of the player
         pot = 0
-        pot += self.bet(room, self.small_blind.session_id, small_blind)
-        pot += self.bet(room, self.big_blind.session_id, small_blind * 2)
+        pot += self._bet(room, self.small_blind.session_id, small_blind)
+        pot += self._bet(room, self.big_blind.session_id, small_blind * 2)
 
         self.pot = pot
         self.small_blind.has_option = True
@@ -504,9 +507,9 @@ class PlayerGameView(BaseModel):
 
             yield chr(out)
 
-    @staticmethod
-    def convert_to_unicode(cards):
-        return "".join(cards)
+    @classmethod
+    def convert_to_unicode(cls, cards):
+        return "".join(cls._convert_to_unicode(cards))
 
     def dict(self, *args, **kwargs):
         # Nasty hack that keeps tests passing

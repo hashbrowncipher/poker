@@ -38,7 +38,9 @@
             </div>
             <div class="hand">
 				<h2>Current Hand</h2>
-                <b>Your Bet:</b> <input id="bet" type="text">
+                <p><b>Your Bet:</b> <input id="bet" type="text"></p>
+                <p><b>Your Cards:</b> <span id="hole_cards" style="font-size: 200%"></p>
+                <p><b>Community Cards:</b> <span id="community_cards" style="font-size: 200%"></p>
                 <pre id="game" />
             </div>
             <div class="log">
@@ -57,6 +59,8 @@ var game_elem = document.getElementById("game");
 var players_elem = document.getElementById("players");
 var log_elem = document.getElementById("log");
 var name_elem = document.getElementById("player_name");
+var hole_cards_elem = document.getElementById("hole_cards");
+var community_cards_elem = document.getElementById("community_cards");
 var seen_room = false;
 var fetch_handle = null;
 var next_index = "0";
@@ -86,8 +90,15 @@ function fetch_state() {
         next_index = response["index"];
         schedule_fetch(0);
 
-        if(xhr.status != 200) {
+        if(xhr.status != 200 || response.room == null) {
             return;
+        }
+
+        var game = response.room.game;
+        if(game != null) {
+            var game = response.room.game;
+            hole_cards_elem.innerText = game.hole_cards;
+            community_cards_elem.innerText = game.community_cards;
         }
 
         game_elem.innerHTML = pretty_print(response.room.game);

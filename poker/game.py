@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from typing import Dict
 from typing import Optional
 from typing import List
+from typing import Tuple
 
 from poker.consul import ConsulKey
 from itertools import product
@@ -291,8 +292,9 @@ class Game(BaseModel):
                 continue
 
             yield player.session_id, (
-                player,
-                community_cards + self._hole_cards_idx(idx),
+                player.copy(),
+                community_cards,
+                self._hole_cards_idx(idx),
             )
 
     def pay_winners(self, room):
@@ -301,23 +303,66 @@ class Game(BaseModel):
         )
         room.log.append(completed_game)
 
-        final_hands = dict(self._get_final_hands())
-        if len(final_hands) == 1:
-            winning_players = list(final_hands.keys())
-        else:
-            winners = get_winners(
-                (s_id, cards) for (s_id, (_, cards)) in final_hands.items()
-            )
-            logger.info("Winners:  %s", winners)
-            winning_players = [s_id for (s_id, hand) in winners]
+        # Maps player ids -> (player, community, hole_cards)
+        final_hands: Dict[str, Tuple[PlayerInHand, str, str]] = dict(
+            self._get_final_hands()
+        )
 
-        for s_id in winning_players:
-            # FIXME: definitely doesn't handle side-pots correctly.
-            player, _ = final_hands[s_id]
-            amount = player.eligibility
-            completed_game.players[s_id] = PlayerAfterGame(hand=None, payout=amount)
-            room.players[s_id].increment_balance(amount)
-            self.pot -= amount
+        max_payouts = len(final_hands)
+        while self.pot > 0:
+            if len(final_hands) == 1:
+                winning_players = list(final_hands.keys())
+            else:
+                winners = get_winners(
+                    (s_id, community + hole)
+                    for (s_id, (_, community, hole)) in final_hands.items()
+                )
+                logger.info("Winners:  %s", winners)
+                winning_players = [s_id for (s_id, _) in winners]
+
+            eliminated = []
+            # Eligibility is odd, we have to take the minimum of the
+            # winning eligibility and divide it between the winners
+            amount = min(final_hands[s][0].eligibility for s in winning_players) // len(
+                winning_players
+            )
+
+            # We're trying to split fewer chips than we have winners
+            # Leave the remaining winnings for the next game's pot
+            if amount == 0:
+                return
+
+            def pay_player(s_id, amount):
+                # Winner has to show down to win
+                # TODO(joey): Losers with a smaller player index who have
+                # not folded should also show down
+                if len(final_hands) > 1:
+                    hand = final_hands[s_id][2]
+                else:
+                    hand = None
+
+                if s_id not in completed_game.players:
+                    completed_game.players[s_id] = PlayerAfterGame(hand=hand, payout=0)
+
+                completed_game.players[s_id].payout += amount
+                room.players[s_id].increment_balance(amount)
+
+            for s_id in winning_players:
+                pay_player(s_id, amount)
+                # Now remove all players that are no longer eligible to win
+                for (p_id, (p, _, _)) in final_hands.items():
+                    p.eligibility -= amount
+                    if p.eligibility <= 0:
+                        eliminated.append(p_id)
+                self.pot -= amount
+                print(self.pot)
+
+            for p_elim in eliminated:
+                del final_hands[p_elim]
+
+            max_payouts -= 1
+            # Infinite loop bug?
+            assert max_payouts >= 0
 
         assert self.pot == 0
 
@@ -325,7 +370,6 @@ class Game(BaseModel):
 class PlayerAfterGame(BaseModel):
     # Hand will be None if they don't have to show
     hand: Optional[str]
-
     payout: int
 
 
@@ -358,22 +402,28 @@ class Room(BaseModel):
             session_ids = list(self.players)
             random.shuffle(session_ids)
             in_hand = [PlayerInHand(session_id=s_id, bet=0) for s_id in session_ids]
+            previous_pot = 0
         else:
             rotated_players = previous_game.players[1:] + previous_game.players[0:1]
             in_hand = [
                 PlayerInHand(session_id=player.session_id, bet=0)
                 for player in rotated_players
             ]
+            previous_pot = previous_game.pot
 
-        cards_drawn = len(self.players) * 2 + 5
-        number_deck = list(range(52))
-        random.shuffle(number_deck)
-
-        deck = "".join(get_card(card) for card in number_deck[:cards_drawn])
-
-        game = Game(players=in_hand, deck=deck, pot=0, stage=0,)
+        # TODO(joey): I think we should be doing len of in hand but ...
+        deck = _make_deck(len(self.players))
+        game = Game(players=in_hand, deck=deck, pot=previous_pot, stage=0,)
         self.game = game
         game.initialize(self)
+
+
+def _make_deck(num_players):
+    # Two hole cards per player plus the community cards
+    cards_drawn = num_players * 2 + 5
+    number_deck = list(range(52))
+    random.shuffle(number_deck)
+    return "".join(get_card(card) for card in number_deck[:cards_drawn])
 
 
 class PydanticConsulKey(ConsulKey):

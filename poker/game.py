@@ -108,15 +108,18 @@ class Game(BaseModel):
             if player.bet > max_bet:
                 max_bet = player.bet
 
-        if len(can_bet) > 1:
-            # Iterate over players who are below the max bet
-            for player in can_bet:
-                if player.bet < max_bet:
-                    return player.session_id
+        if len(can_bet) < 2:
+            return None
 
-            # If all bets are equal, go in order of who has the option
-            for player in has_option:
-                return player.session_id
+        # To account for blinds, we must take the smallest bet, not the first bet
+        # beneath the max_bet.
+        smallest_bettor = min(can_bet, key=lambda player: player.bet)
+        if smallest_bettor.bet < max_bet:
+            return smallest_bettor
+
+        # If all bets are equal, go in order of who has the option
+        for player in has_option:
+            return player.session_id
 
     def _finalize_betting(self, balances):
         # The pot is good. Calculate eligibility. A player's eligibility is equal to
@@ -187,6 +190,9 @@ class Game(BaseModel):
         bettor.has_option = False
 
     def bet(self, room, session_id, value, lt_ok=False):
+        if session_id != self.get_next_to_act(room):
+            return
+
         bettor = self.get_player(session_id)
         needed = value - bettor.bet
         if needed < 0:

@@ -4,30 +4,80 @@
   <script src="https://cdn.jsdelivr.net/gh/google/code-prettify@master/loader/run_prettify.js"></script>
 	</head>
 	<body>
+		<p>
+		Name: <input id="player_name" type="text">
+		</p>
+		<p>
+		Bet: <input id="bet" type="text">
+		</p>
 		<pre id="state" />
 		<script type="text/javascript">
-			"use strict";
-			var room_name = window.location.path.split("/").pop();
-			var state_elem = document.getElementById("state");
-			var next_index = "0";
+"use strict";
+var room_name = location.pathname.split("/").pop();
+var state_elem = document.getElementById("state");
+var seen_room = false;
+var fetch_handle = null;
+var next_index = "0";
 
-			function fetch_state() {
-				var xhr = new XMLHttpRequest();
-				xhr.onload = function() {
-					var response = JSON.parse(xhr.responseText)
-					next_index = response["index"]
+function schedule_fetch(timeout) {
+	clearTimeout(fetch_handle);
+	fetch_handle = setTimeout(fetch_state, timeout);
+}
 
-					state_elem.innerHTML = PR.prettyPrintOne(JSON.stringify(response["room"], undefined, 2), "js");
-					setTimeout(fetch_state, 0);
-				};
-				xhr.ontimeout = function() {
-					setTimeout(fetch_state, 0);
-				};
-				xhr.open("GET", "/api/room/" + room_name + "?index=" + next_index);
-				xhr.timeout = 120000;
-				xhr.send();
-			}
-			fetch_state();
+function fetch_state() {
+	var xhr = new XMLHttpRequest();
+	xhr.onload = function() {
+		if(xhr.status != 200) {
+			setTimeout(fetch_state, 10000);
+			return;
+		}
+		var response = JSON.parse(xhr.responseText);
+		next_index = response["index"];
+
+		state_elem.innerHTML = PR.prettyPrintOne(JSON.stringify(response["room"], undefined, 2), "js");
+		schedule_fetch(0);
+	};
+	xhr.ontimeout = function() {
+		schedule_fetch(0);
+	};
+	xhr.open("GET", "/api/room/" + room_name + "?index=" + next_index);
+	xhr.timeout = 120000;
+	xhr.send();
+}
+fetch_state();
+
+var bet_input = document.getElementById("bet");
+bet_input.addEventListener("keyup", function(event) {
+	if(event.keyCode != 13) {
+		return;
+	}
+	var amount = parseInt(bet_input.value);
+	var xhr = new XMLHttpRequest();
+	xhr.open("POST", "/api/room/" + room_name + "/bet");
+	var payload = JSON.stringify({"amount": amount});
+	xhr.setRequestHeader("Content-Type", "application/json");
+	xhr.send(payload);
+});
+
+var name_input = document.getElementById("player_name");
+name_input.addEventListener("keyup", function(event) {
+	if(event.keyCode != 13) {
+		return;
+	}
+	var xhr = new XMLHttpRequest();
+	xhr.onload = function() {
+		if(xhr.status != 200) {
+			alert(xhr.responseText);
+			return;
+		}
+	};
+
+	xhr.open("POST", "/api/room/" + room_name + "/join");
+	var payload = JSON.stringify({"name": name_input.value});
+	xhr.setRequestHeader("Content-Type", "application/json");
+	xhr.send(payload);
+});
+
 		</script>
 	</body>
 </html>

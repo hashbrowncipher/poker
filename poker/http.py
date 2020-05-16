@@ -27,7 +27,7 @@ def _get_session_id(request):
     return str(uuid4())
 
 
-def route_spa(request):
+def route_spa(request, room_name):
     return Response(SPA_CONTENTS, headers=(
         ("Content-Type", "text/html; charset=utf-8"),
     ))
@@ -39,9 +39,24 @@ def route_show_room(request, room_name) -> Response:
     return game.show_room(room_name, session_id, index)
 
 
+def route_join(request, room_name) -> Response:
+    data = json.load(request.stream)
+    try:
+        game.register(room_name, request.session_id, data["name"])
+    except game.CannotRegister as ex:
+        return Response(ex.args[0], status=400)
+
+
+def route_bet(request, room_name) -> Response:
+    data = json.load(request.stream)
+    game.register(room_name, request.session_id, data["amount"])
+
+
 url_map = Map([
-    Rule('/r', endpoint=route_spa),
+    Rule('/r/<room_name>', endpoint=route_spa),
     Rule('/api/room/<room_name>', endpoint=route_show_room),
+    Rule('/api/room/<room_name>/bet', endpoint=route_bet),
+    Rule('/api/room/<room_name>/join', endpoint=route_join),
 ])
 
 

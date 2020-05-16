@@ -9,7 +9,6 @@ from poker.consul import ConsulKey
 from itertools import product
 from poker.consul import NOT_PRESENT
 from poker.hands import get_winners
-from poker.consul import NO_CHANGE
 from enum import IntEnum
 
 logger = logging.getLogger(__name__)
@@ -349,6 +348,10 @@ def _room(name):
     return PydanticConsulKey(f"/room/{name}", Room)
 
 
+class AlertException(Exception):
+    pass
+
+
 class CannotRegister(Exception):
     pass
 
@@ -366,10 +369,14 @@ def register(room_name: str, session_id: str, player_name: str):
 
         for key, player in state.players.items():
             if key == session_id:
-                return NO_CHANGE
+                continue
 
             if player.name == player_name:
                 raise CannotRegister(f"The name {player_name} is taken in this room")
+
+        if session_id in state.players:
+            state.players[session_id].name = player_name
+            return state
 
         if len(state.players) > 10:
             raise CannotRegister(f"This room already has {len(state.players)}")
@@ -438,6 +445,45 @@ class PlayerGameView(BaseModel):
     community_cards: str
     players: list
 
+    @staticmethod
+    def _convert_to_unicode(cards):
+        while True:
+            out = 0x1F0A0
+            try:
+                value = next(cards)
+            except StopIteration:
+                break
+
+            if value == "A":
+                out += 1
+            elif value == "K":
+                out += 0xE
+            elif value == "Q":
+                out += 0xD
+            elif value == "J":
+                out += 0xB
+            elif value == "X":
+                out += 0xA
+            else:
+                out += ord(value) - 0x30
+
+            suit = next(cards)
+            if suit == "H":
+                out += 0x10
+            elif suit == "D":
+                out += 0x20
+            elif suit == "C":
+                out += 0x30
+
+            yield chr(out)
+
+    def dict(self):
+        # Nasty hack that keeps tests passing
+        val = super().dict()
+        val["hole_cards"] = str(self._convert_to_unicode(val["hole_cards"]))
+        val["community_cards"] = str(self._convert_to_unicode(val["community_cards"]))
+        return val
+
 
 class PlayerRoomView(BaseModel):
     players: Dict[str, dict]
@@ -446,6 +492,9 @@ class PlayerRoomView(BaseModel):
 
 
 def _show_room(session_id, room_state):
+    if room_state is NOT_PRESENT:
+        return None
+
     ret = PlayerRoomView(
         players=dict(
             (player.name, dict(balance=player.balance, session_id=s_id))
@@ -489,7 +538,8 @@ def _show_room(session_id, room_state):
 
 def show_room(room_name: str, session_id: str, query_index: str):
     index, room_state = _room(room_name).get(index=query_index, wait="60s")
-    return dict(index=index, room=_show_room(session_id, room_state).dict())
+    value = _show_room(session_id, room_state)
+    return dict(index=index, room=value.dict() if value is not None else None)
 
 
 def get_player_view(room_name: str, session_id: str):

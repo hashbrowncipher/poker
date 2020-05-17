@@ -392,11 +392,22 @@ class Room(BaseModel):
     def player(self, session_id):
         return self.players[session_id]
 
+    def _add_pending_players_to_game_list(self, players):
+        in_game = set(player.session_id for player in players)
+        pending_players = [
+            PlayerInHand(session_id=session_id, bet=0)
+            for session_id
+            in self.players.keys()
+            if session_id not in in_game
+        ]
+
+        random.shuffle(pending_players)
+        return pending_players + players
+
+
     def new_game(self, previous_game):
         if previous_game is None:
-            session_ids = list(self.players)
-            random.shuffle(session_ids)
-            in_hand = [PlayerInHand(session_id=s_id, bet=0) for s_id in session_ids]
+            in_hand = []
             previous_pot = 0
         else:
             rotated_players = previous_game.players[1:] + previous_game.players[0:1]
@@ -405,6 +416,8 @@ class Room(BaseModel):
                 for player in rotated_players
             ]
             previous_pot = previous_game.pot
+
+        in_hand = self._add_pending_players_to_game_list(in_hand)
 
         # TODO(joey): I think we should be doing len of in hand but ...
         deck = _make_deck(len(self.players))

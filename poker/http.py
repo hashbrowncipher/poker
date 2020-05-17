@@ -55,7 +55,7 @@ def route_show_room(request, room_name) -> Response:
 def route_join(request, room_name) -> Response:
     data = json.load(request.stream)
     try:
-        game.register(room_name, request.session_id, data["name"])
+        game.register(room_name, request.session_id, data["name"].strip())
     except game.CannotRegister as ex:
         return Response(ex.args[0], status=400)
 

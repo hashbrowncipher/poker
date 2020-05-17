@@ -286,7 +286,7 @@ bet_input.addEventListener("keyup", function(event) {
     var xhr = new XMLHttpRequest();
     var payload = undefined;
 
-    if(bet_input.value.trim() == "fold") {
+    if(bet_input.value.trim().toLowerCase() == "fold") {
         xhr.open("POST", "/api/room/" + room_name + "/fold");
     } else {
         var amount = parseInt(bet_input.value);

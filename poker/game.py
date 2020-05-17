@@ -219,14 +219,15 @@ class Game(BaseModel):
         raise KeyError(session_id)
 
     def fold(self, room, session_id):
-        self._check_can_bet(session_id, room)
+        if not self._check_can_bet(session_id, room):
+            return
+
         bettor = self.get_player(session_id)
         bettor.eligibility = None
         bettor.has_option = False
 
     def _check_can_bet(self, session_id, room):
-        if session_id != self.get_next_to_act(room.get_balances()):
-            return None
+        return session_id == self.get_next_to_act(room.get_balances())
 
     def _bet(self, room, session_id, value):
         bettor = self.get_player(session_id)
@@ -241,7 +242,9 @@ class Game(BaseModel):
         return got
 
     def bet(self, room, session_id, value, lt_ok=False):
-        self._check_can_bet(session_id, room)
+        if not self._check_can_bet(session_id, room):
+            return
+
         self._bet(room, session_id, value)
 
     @property

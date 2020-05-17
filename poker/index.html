@@ -118,6 +118,12 @@ function addHeader(row, value) {
     row.appendChild(header);
 }
 
+function escape(value) {
+    var elem = document.createElement("span");
+    elem.innerText = value;
+    return elem.innerHTML;
+}
+
 function show_gamestate(elem, value) {
     elem.innerHTML ="";
     var newTable = document.createElement("table");
@@ -147,10 +153,11 @@ function show_gamestate(elem, value) {
         var player = value.players[i];
         var row = playerTable.insertRow();
         var cell = row.insertCell(0);
+        var name = escape(player.name);
         if (player.name == value.next_to_act) {
-            cell.innerHTML = "<span class='active'>" + player.name + "</span>";
+            cell.innerHTML = "<span class='active'>" + name + "</span>";
         } else {
-            cell.innerHTML = player.name;
+            cell.innerHTML = name;
         }
 
         cell = row.insertCell(1);

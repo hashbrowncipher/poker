@@ -35,16 +35,12 @@
 .gamestate {
   grid-column: 2 / 4;
   grid-row: 2 / 6;
-}
-.players {
-  grid-column: 4;
-  grid-row: 2 / 3;
-  max-width: 40em;
-  overflow: scroll;
+  width: 40%;
 }
 .log {
   grid-column: 4;
-  grid-row: 3 / 6;
+  grid-row: 2 / 6;
+  width: 25%;
 }
 .active {
   animation:blinkingText 1.2s infinite;
@@ -60,9 +56,10 @@
 table, th, td {
   border: 1px solid black;
   overflow: hidden;
+  table-layout: fixed;
 }
 th, td {
-  max-width: 24em;
+  max-width: 14em;
   padding: 6px;
 }
 </style>
@@ -85,16 +82,11 @@ th, td {
                 <h2>Game Log </h3>
                 <pre id="log" />
             </div>
-            <div class="players" style="font-size: 150%">
-                <h2>Players In Room</h3>
-                <pre id="players" />
-            </div>
         </div>
         <script type="text/javascript">
 "use strict";
 var room_name = location.pathname.split("/").pop();
 var game_elem = document.getElementById("game");
-var players_elem = document.getElementById("players");
 var log_elem = document.getElementById("log");
 var name_elem = document.getElementById("player_name");
 var name_set = false;
@@ -128,7 +120,7 @@ function escape(value) {
     return elem.innerHTML;
 }
 
-function show_gamestate(elem, value) {
+function show_gamestate(elem, value, players) {
     elem.innerHTML ="";
     var newTable = document.createElement("table");
     newTable.className = "tbl";
@@ -152,6 +144,7 @@ function show_gamestate(elem, value) {
     var name = playerTable.insertRow();
     addHeader(name, "Player");
     addHeader(name, "Current Bet");
+    addHeader(name, "Stack");
 
     for (var i = 0; i < value.players.length; i++) {
         var player = value.players[i];
@@ -170,6 +163,9 @@ function show_gamestate(elem, value) {
         } else {
             cell.innerHTML = player.bet;
         }
+
+        cell = row.insertCell(2);
+        cell.innerHTML = players[player.name].balance
     }
 
     elem.appendChild(playerTable);
@@ -264,10 +260,10 @@ function fetch_state() {
             name_set = true;
         }
 
-        show_gamestate(game_elem, game)
+        show_gamestate(game_elem, game, response.room.players)
 
-        ///game_elem.innerHTML = pretty_print(response.room.game);
-        players_elem.innerHTML = pretty_print(response.room.players);
+        //game_elem.innerHTML = pretty_print(response.room.game);
+        //players_elem.innerHTML = pretty_print(response.room.players);
         log_elem.innerHTML = pretty_print(response.room.log);
     };
     xhr.ontimeout = function() {

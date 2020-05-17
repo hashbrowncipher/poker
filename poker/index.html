@@ -19,12 +19,14 @@
 }
 .hand {
   grid-column: 1;
-  grid-row: 2;
+  grid-row: 2 / 4;
 }
+/*
 .community {
   grid-column: 1;
   grid-row: 3;
 }
+*/
 .gamestate {
   grid-column: 2 / 4;
   grid-row: 2 / 6;
@@ -63,13 +65,8 @@ th, td {
             </div>
             <div class="hand">
                 <h2>Your Hand</h2>
-                <span style="font-size: 1000%">
-                <span id="hole_cards">
-            </div>
-            <div class="community">
-                <h2>Community Cards</h2>
-                <span style="font-size: 800%">
-                <span id="community_cards">
+                <div><span id="hole_cards" style="font-size: 1000%"></div>
+                <div><span id="community_cards" style="font-size: 800%"></div>
             </div>
             <div class="gamestate" style="font-size: 200%">
                 Your Bet: <input id="bet" type="text">

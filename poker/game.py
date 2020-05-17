@@ -410,14 +410,12 @@ class Room(BaseModel):
         in_game = set(player.session_id for player in players)
         pending_players = [
             PlayerInHand(session_id=session_id, bet=0)
-            for session_id
-            in self.players.keys()
+            for session_id in self.players.keys()
             if session_id not in in_game
         ]
 
         random.shuffle(pending_players)
         return pending_players + players
-
 
     def new_game(self, previous_game):
         if previous_game is None:
@@ -641,7 +639,7 @@ def _show_room(session_id, room_state):
             (player.name, dict(balance=player.balance))
             for s_id, player in room_state.players.items()
         ),
-        log=room_state.log,
+        log=list(reversed(room_state.log)),
         game=_get_game_view(session_id, room_state),
     )
 

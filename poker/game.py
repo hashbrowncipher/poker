@@ -568,6 +568,8 @@ def add_player_balance(name: str, session_id: str, amount: str):
         room.player(session_id).increment_balance(amount)
         return room
 
+    room_state.mutate(mutation)
+
 
 class PlayerGameView(BaseModel):
     next_to_act: str

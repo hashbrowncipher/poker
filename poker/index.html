@@ -88,6 +88,7 @@ var game_elem = document.getElementById("game");
 var players_elem = document.getElementById("players");
 var log_elem = document.getElementById("log");
 var name_elem = document.getElementById("player_name");
+var name_set = false;
 var hole_cards_elem = document.getElementById("hole_cards");
 var community_cards_elem = document.getElementById("community_cards");
 var seen_room = false;
@@ -242,8 +243,9 @@ function fetch_state() {
             delete game.community_cards;
         }
 
-        if (response.room.name != null) {
+        if (!name_set && response.room.name != null) {
             name_elem.value = response.room.name;
+            name_set = true;
         }
 
         show_gamestate(game_elem, game)

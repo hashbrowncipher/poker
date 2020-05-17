@@ -142,14 +142,18 @@ function show_gamestate(elem, value, players) {
     playerTable.className = "tbl";
 
     var name = playerTable.insertRow();
+    addHeader(name, "Stack");
     addHeader(name, "Player");
     addHeader(name, "Current Bet");
-    addHeader(name, "Stack");
 
     for (var i = 0; i < value.players.length; i++) {
         var player = value.players[i];
         var row = playerTable.insertRow();
-        var cell = row.insertCell(0);
+
+        cell = row.insertCell(0);
+        cell.innerHTML = players[player.name].balance
+
+        var cell = row.insertCell(1);
         var name = escape(player.name);
         if (player.name == value.next_to_act) {
             cell.innerHTML = "<span class='active'>" + name + "</span>";
@@ -157,15 +161,13 @@ function show_gamestate(elem, value, players) {
             cell.innerHTML = name;
         }
 
-        cell = row.insertCell(1);
+        cell = row.insertCell(2);
         if (player.eligibility == null) {
             cell.innerHTML = "fold";
         } else {
             cell.innerHTML = player.bet;
         }
 
-        cell = row.insertCell(2);
-        cell.innerHTML = players[player.name].balance
     }
 
     elem.appendChild(playerTable);

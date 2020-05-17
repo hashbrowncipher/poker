@@ -21,6 +21,11 @@
   grid-column: 1;
   grid-row: 2 / 4;
 }
+.hole {
+  border-right: 2px solid black;
+  border-bottom: 2px solid black;
+  padding-bottom: 2px;
+}
 /*
 .community {
   grid-column: 1;
@@ -65,7 +70,7 @@ th, td {
             </div>
             <div class="hand">
                 <h2>Your Hand</h2>
-                <div><span id="hole_cards" style="font-size: 1000%"></div>
+                <div class='hole'><span id="hole_cards" style="font-size: 1000%"></div>
                 <div><span id="community_cards" style="font-size: 800%"></div>
             </div>
             <div class="gamestate" style="font-size: 200%">

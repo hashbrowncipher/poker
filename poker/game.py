@@ -117,8 +117,16 @@ class Game(BaseModel):
 
         if can_bet >= 2:
             for player in self.players:
-                if player.has_option and player.eligibility is not None:
-                    return player.session_id
+                if not player.has_option:
+                    continue
+
+                if player.eligibility is None:
+                    continue
+
+                if balances[player.session_id] == 0:
+                    continue
+
+                return player.session_id
 
         return None
 
@@ -211,9 +219,14 @@ class Game(BaseModel):
         raise KeyError(session_id)
 
     def fold(self, room, session_id):
+        self._check_can_bet(session_id, room)
         bettor = self.get_player(session_id)
         bettor.eligibility = None
         bettor.has_option = False
+
+    def _check_can_bet(session_id, room):
+        if session_id != self.get_next_to_act(room.get_balances()):
+            return None
 
     def _bet(self, room, session_id, value):
         bettor = self.get_player(session_id)
@@ -228,9 +241,7 @@ class Game(BaseModel):
         return got
 
     def bet(self, room, session_id, value, lt_ok=False):
-        if session_id != self.get_next_to_act(room.get_balances()):
-            return None
-
+        self._check_can_bet(session_id, room)
         self._bet(room, session_id, value)
 
     @property
@@ -490,7 +501,7 @@ def register(room_name: str, session_id: str, player_name: str):
             return state
 
         if len(state.players) > 10:
-            raise CannotRegister(f"This room already has {len(state.players)}")
+            raise CannotRegister(f"This room already has {len(state.players)} players")
 
         state.players[session_id] = Player(
             balance=100, name=player_name, pending_balance=0

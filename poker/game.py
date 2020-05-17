@@ -224,7 +224,7 @@ class Game(BaseModel):
         bettor.eligibility = None
         bettor.has_option = False
 
-    def _check_can_bet(session_id, room):
+    def _check_can_bet(self, session_id, room):
         if session_id != self.get_next_to_act(room.get_balances()):
             return None
 

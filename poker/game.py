@@ -605,6 +605,7 @@ def add_player_balance(name: str, session_id: str, amount: str):
 
 
 class PlayerGameView(BaseModel):
+    should_act: bool
     next_to_act: str
     pot: int
     hole_cards: str
@@ -639,6 +640,7 @@ def _get_game_view(session_id, room_state):
     next_to_act = game.get_next_to_act(room_state.get_balances())
 
     return PlayerGameView(
+        should_act=next_to_act == session_id,
         next_to_act=room_state.player(next_to_act).name,
         pot=game.pot,
         hole_cards=game.deck[deck_index : deck_index + 4],

@@ -18,6 +18,9 @@ from poker import game
 with open_binary("poker", "index.html") as fh:
     SPA_CONTENTS = fh.read()
 
+with open_binary("poker", "chime.oga") as fh:
+    CHIME_CONTENTS = fh.read()
+
 logger = logging.getLogger(__name__)
 COOKIE_KEY = "id"
 
@@ -43,6 +46,16 @@ def _get_cookie_id(request):
 def route_spa(request, room_name):
     return Response(
         SPA_CONTENTS, headers=(("Content-Type", "text/html; charset=utf-8"),)
+    )
+
+
+def route_chime(request):
+    return Response(
+        CHIME_CONTENTS,
+        headers=(
+            ("Content-Type", "audio/ogg"),
+            ("Cache-Control", "public, max-age: 600"),
+        )
     )
 
 
@@ -81,6 +94,7 @@ url_map = Map(
         Rule("/api/room/<room_name>/fold", endpoint=route_fold),
         Rule("/api/room/<room_name>/join", endpoint=route_join),
         Rule("/api/room/<room_name>/start", endpoint=route_start),
+        Rule("/static/chime.oga", endpoint=route_chime),
     ]
 )
 

@@ -100,6 +100,7 @@ var start_elem = document.getElementById("start");
 var hole_cards_elem = document.getElementById("hole_cards");
 var community_cards_elem = document.getElementById("community_cards");
 var seen_room = false;
+var chime_handle = null;
 var fetch_handle = null;
 var next_index = "0";
 
@@ -240,6 +241,25 @@ function start_game() {
     xhr.send();
 }
 
+function play_chime() {
+    var audio = new Audio("/static/chime.oga");
+    if(chime_handle) {
+        clearTimeout(chime_handle);
+    }
+    chime_handle = setTimeout(play_chime, 10000);
+    audio.play();
+}
+
+
+function schedule_chime(enable) {
+    if(enable && chime_handle == null) {
+      play_chime();
+    } else {
+      clearTimeout(chime_handle);
+      chime_handle = null;
+    }
+}
+
 
 function fetch_state() {
     var xhr = new XMLHttpRequest();
@@ -267,6 +287,7 @@ function fetch_state() {
             var game = response.room.game;
             show_cards(hole_cards_elem, game.hole_cards);
             show_cards(community_cards_elem, game.community_cards);
+            schedule_chime(game.should_act);
             delete game.hole_cards;
             delete game.community_cards;
         }

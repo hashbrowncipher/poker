@@ -21,6 +21,8 @@ _NUMBERS = "AKQJX98765432"
 _SUITS = "SHCD"
 _CARDS = "".join([number + suit for number, suit in product(_NUMBERS, _SUITS)])
 
+_SUIT_CODEPOINTS = dict(S="♠", H="♡", D="♢", C="♣")
+
 
 class Stage(IntEnum):
     PRE_FLOP = 0
@@ -386,6 +388,22 @@ class PlayerAfterGame(BaseModel):
     hand: Optional[str]
     payout: int
 
+    def show(self):
+        hand = None if self.hand is None else _convert_card_string(self.hand)
+        return self.__class__(
+            hand=hand,
+            payout=self.payout,
+        )
+
+
+def _get_card_char(s):
+    ret = _SUIT_CODEPOINTS.get(s, s)
+    return ret
+
+
+def _convert_card_string(s):
+    return ''.join(map(_get_card_char, s))
+
 
 class CompletedGame(BaseModel):
     community_cards: str
@@ -657,17 +675,21 @@ def _get_game_view(session_id, room_state):
     )
 
 
+def _convert_log(room_state):
+    for game in room_state.log:
+        game.community_cards = _convert_card_string(game.community_cards)
+        game.players = dict(
+            (room_state.get_name(session_id), result.show())
+            for (session_id, result) in game.players.items()
+        )
+
+
 def _show_room(my_session_id: SessionID, room_state):
     if room_state is NOT_PRESENT:
         return None
 
     myself = room_state.players.get(my_session_id, None)
-
-    for game in room_state.log:
-        game.players = dict(
-            (room_state.get_name(session_id), result)
-            for (session_id, result) in game.players.items()
-        )
+    _convert_log(room_state)
 
     return PlayerRoomView(
         name=myself.name if myself else None,

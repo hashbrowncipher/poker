@@ -84,7 +84,20 @@ def route_fold(request, room_name) -> Response:
 
 
 def route_start(request, room_name) -> Response:
-    game.start(room_name, request.session_id)
+    try:
+        game.start(room_name, request.session_id)
+    except game.NotAdmin as ex:
+        return ex.as_response()
+    except game.CannotStart as ex:
+        return Response(ex.args[0], status=400)
+
+
+def route_cash(request, room_name) -> Response:
+    data = json.load(request.stream)
+    try:
+        game.increment_balance(room_name, request.session_id, **data)
+    except game.NotAdmin as ex:
+        return ex.as_response()
 
 
 url_map = Map(
@@ -95,6 +108,7 @@ url_map = Map(
         Rule("/api/room/<room_name>/fold", endpoint=route_fold),
         Rule("/api/room/<room_name>/join", endpoint=route_join),
         Rule("/api/room/<room_name>/start", endpoint=route_start),
+        Rule("/api/room/<room_name>/cash", endpoint=route_cash),
         Rule("/static/chime.oga", endpoint=route_chime),
     ]
 )

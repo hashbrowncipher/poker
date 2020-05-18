@@ -12,6 +12,7 @@ from itertools import product
 from poker.consul import NOT_PRESENT
 from poker.hands import get_winners
 from enum import IntEnum
+from werkzeug.wrappers import Response
 
 logger = logging.getLogger(__name__)
 random = SystemRandom()
@@ -427,6 +428,13 @@ class Room(BaseModel):
     def get_name(self, session_id):
         return self.players[session_id].name
 
+    def get_player_by_name(self, name):
+        for player in self.players.values():
+            if player.name == name:
+                return player
+
+        return None
+
     def get_balances(self):
         return dict((k, p.balance) for (k, p) in self.players.items())
 
@@ -568,6 +576,14 @@ class CannotStart(Exception):
     pass
 
 
+class NotAdmin(Exception):
+    def __init__(self, admin_name):
+        self._admin_name = admin_name
+
+    def as_response(self):
+        return Response("You are not the admin. Ask {self._admin_name}.", status=403)
+
+
 def start(name: str, session_id: str):
     room_state = _room(name)
 
@@ -578,7 +594,7 @@ def start(name: str, session_id: str):
         if state.admin is not None and state.admin != session_id:
             admin = state.players.get(state.admin, None)
             admin_name = admin.name if admin is not None else "[unknown]"
-            raise CannotStart(f"You are not the admin, ask {admin_name}")
+            raise NotAdmin(f"You are not the admin, ask {admin_name}")
 
         if session_id not in state.players:
             raise CannotStart("You are not joined to this room")
@@ -618,11 +634,14 @@ def fold(name: str, session_id: str):
     room_state.mutate(mutation)
 
 
-def add_player_balance(name: str, session_id: str, amount: str):
-    room_state = _room(name)
+def increment_balance(room_name: str, session_id: str, *, name: str, amount: str):
+    room_state = _room(room_name)
 
     def mutation(room):
-        room.player(session_id).increment_balance(amount)
+        if session_id != room.admin:
+            raise AlertException("You are not room admin!")
+
+        room.get_player_by_name(name).increment_balance(amount)
         return room
 
     room_state.mutate(mutation)

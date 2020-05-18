@@ -40,7 +40,6 @@
 .log {
   grid-column: 4;
   grid-row: 2 / 6;
-  width: 25%;
 }
 .active {
   animation:blinkingText 1.2s infinite;
@@ -62,10 +61,8 @@ th, td {
   max-width: 14em;
   padding: 6px;
 }
-.start-hidden {
+.admin-only {
   display: none;
-}
-.start-show {
 }
 </style>
     </head>
@@ -73,7 +70,7 @@ th, td {
         <div class="room">
             <div class="name">
                 Welcome <input id="player_name" type="text" value="Enter your Name" style="font-size: xx-large"> to Poker!
-                <button id="start" type="button" class="start-hidden" onclick="start_game()">Start Game</button>
+                <button id="start" type="button" class="admin-only" onclick="start_game()">Start Game</button>
             </div>
             <div class="hand">
                 <h2>Your Hand</h2>
@@ -85,6 +82,11 @@ th, td {
                 <pre id="game" />
             </div>
             <div class="log" style="font-size: 150%">
+                <form class="admin-only" style="font-size: medium">
+                Add Balance<br>
+                Name: <input name="name" id="cash-name" /><br>
+                Amount: <input name="amount" id="cash-amount" /><br>
+                </form>
                 <h2>Game Log </h3>
                 <pre id="log" />
             </div>
@@ -103,6 +105,9 @@ var seen_room = false;
 var chime_handle = null;
 var fetch_handle = null;
 var next_index = "0";
+
+var cash_name = document.getElementById("cash-name");
+var cash_amount = document.getElementById("cash-amount");
 
 function schedule_fetch(timeout) {
     clearTimeout(fetch_handle);
@@ -268,6 +273,12 @@ function schedule_chime(enable) {
     }
 }
 
+function show_admin() {
+    for(const elem of document.getElementsByClassName("admin-only")) {
+        elem.style.display = "initial";
+    }
+}
+
 
 function fetch_state() {
     var xhr = new XMLHttpRequest();
@@ -286,8 +297,8 @@ function fetch_state() {
             return;
         }
 
-        if (response.room.name == response.room.admin_name) {
-            start_elem.className = "start-show";
+        if (response.room.is_admin) {
+            show_admin();
         }
 
         var game = response.room.game;
@@ -339,6 +350,29 @@ bet_input.addEventListener("keyup", function(event) {
     xhr.setRequestHeader("Content-Type", "application/json");
     xhr.send(payload);
 });
+
+function json_post(url, val) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    xhr.setRequestHeader("Content-Type", "application/json");
+
+    var send = xhr.send.bind(xhr);
+    console.log(send)
+    xhr.send = function() { send(JSON.stringify(val)) };
+    return xhr;
+}
+
+cash_amount.onkeydown = function(event) {
+    if(event.keyCode != 13) {
+        return;
+    }
+
+    var xhr = json_post(
+        "/api/room/" + room_name + "/cash",
+        { name: cash_name.value, amount: parseInt(cash_amount.value) }
+    )
+    xhr.send();
+}
 
 var name_input = document.getElementById("player_name");
 name_input.addEventListener("keyup", function(event) {

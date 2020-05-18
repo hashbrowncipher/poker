@@ -563,7 +563,7 @@ def register(room_name: str, session_id: str, player_name: str):
             raise CannotRegister(f"This room already has {len(state.players)} players")
 
         state.players[session_id] = Player(
-            balance=100, name=player_name, pending_balance=0
+            balance=0, name=player_name, pending_balance=0
         )
         state.admin = state.admin or session_id
 

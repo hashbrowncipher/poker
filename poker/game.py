@@ -633,7 +633,7 @@ class PlayerGameView(BaseModel):
 
 class PlayerRoomView(BaseModel):
     name: Optional[str]
-    is_admin: bool
+    admin_name: Optional[str]
     players: Dict[str, dict]
     game: Optional[PlayerGameView]
     log: List[CompletedGame]
@@ -693,7 +693,7 @@ def _show_room(my_session_id: SessionID, room_state):
 
     return PlayerRoomView(
         name=myself.name if myself else None,
-        is_admin=my_session_id == room_state.admin,
+        admin_name=room_state.get_name(room_state.admin),
         players=dict(
             (player.name, dict(balance=player.balance))
             for s_id, player in room_state.players.items()

@@ -128,25 +128,20 @@ function escape(value) {
     return elem.innerHTML;
 }
 
-function show_gamestate(elem, value, players) {
+function show_gamestate(elem, game, players, admin_name) {
     elem.innerHTML = "";
-    if (value == null) {
-        return;
+    // game state is not present before the game starts
+    if (game != null) {
+        var newTable = document.createElement("table");
+        newTable.className = "tbl";
+
+        var pot = newTable.insertRow();
+        addHeader(pot, "Pot Value")
+        pot.insertCell().innerHTML = game.pot;
+
+        elem.appendChild(newTable);
     }
-    var newTable = document.createElement("table");
-    newTable.className = "tbl";
 
-    /*
-    var nextToAct = newTable.insertRow();
-    addHeader(nextToAct, "Next to Act")
-    nextToAct.insertCell().innerHTML = value.next_to_act;
-    */
-
-    var pot = newTable.insertRow();
-    addHeader(pot, "Pot Value")
-    pot.insertCell().innerHTML = value.pot;
-
-    elem.appendChild(newTable);
     var playerTable = document.createElement("table");
     playerTable.className = "tbl";
 
@@ -155,30 +150,44 @@ function show_gamestate(elem, value, players) {
     addHeader(name, "Player");
     addHeader(name, "Current Bet");
 
-    for (var i = 0; i < value.players.length; i++) {
-        var player = value.players[i];
-        var row = playerTable.insertRow();
-
-        cell = row.insertCell(0);
-        cell.innerHTML = players[player.name].balance
-
-        var cell = row.insertCell(1);
-        var name = escape(player.name);
-        if (player.name == value.next_to_act) {
-            cell.innerHTML = "<span class='active'>" + name + "</span>";
-        } else {
-            cell.innerHTML = name;
+    // If the game hasn't started yet just show the lobby
+    if (game == null) {
+        for (let [name, info] of Object.entries(players)) {
+            var row = playerTable.insertRow();
+            row.insertCell(0).innerHTML = info.balance;
+            var nameCell = row.insertCell(1);
+            if (name == admin_name) {
+                nameCell.innerHTML = escape("*" + name);
+            } else {
+                nameCell.innerHTML = escape(name);
+            }
+            row.insertCell(2).innerHTML = "not started";
         }
+    } else {
+        for (var i = 0; i < game.players.length; i++) {
+            var player = game.players[i];
+            var row = playerTable.insertRow();
 
-        cell = row.insertCell(2);
-        if (player.eligibility == null) {
-            cell.innerHTML = "fold";
-        } else {
-            if (player.bet != null) {
-                cell.innerHTML = player.bet;
+            var cell = row.insertCell(0);
+            cell.innerHTML = players[player.name].balance
+
+            var cell = row.insertCell(1);
+            var name = escape(player.name);
+            if (player.name == game.next_to_act) {
+                cell.innerHTML = "<span class='active'>" + name + "</span>";
+            } else {
+                cell.innerHTML = name;
+            }
+
+            cell = row.insertCell(2);
+            if (player.eligibility == null) {
+                cell.innerHTML = "fold";
+            } else {
+                if (player.bet != null) {
+                    cell.innerHTML = player.bet;
+                }
             }
         }
-
     }
 
     elem.appendChild(playerTable);
@@ -277,7 +286,7 @@ function fetch_state() {
             return;
         }
 
-        if (response.room.is_admin) {
+        if (response.room.name == response.room.admin_name) {
             start_elem.className = "start-show";
         }
 
@@ -296,10 +305,7 @@ function fetch_state() {
             name_set = true;
         }
 
-        show_gamestate(game_elem, game, response.room.players)
-
-        //game_elem.innerHTML = pretty_print(response.room.game);
-        //players_elem.innerHTML = pretty_print(response.room.players);
+        show_gamestate(game_elem, game, response.room.players, response.room.admin_name)
         log_elem.innerHTML = pretty_print(response.room.log);
     };
     xhr.ontimeout = function() {

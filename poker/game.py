@@ -29,6 +29,10 @@ class Stage(IntEnum):
     RIVER = 3
 
 
+class SessionID(str):
+    pass
+
+
 REVEALED_CARDS = {
     Stage.PRE_FLOP: 0,
     Stage.FLOP: 3,
@@ -76,6 +80,7 @@ class PlayersInHand(List[PlayerInHand]):
 
 
 class Game(BaseModel):
+    # arranged in bet order: dealer last
     players: List[PlayerInHand]
 
     # not technically necessary to store, as it can be synthesized as max(eligibility)
@@ -391,8 +396,10 @@ class Room(BaseModel):
     # After the room has been initialized, there will always be a Game present
     game: Optional[Game]
 
-    # arranged in bet order: dealer last
-    players: Dict[str, Player]
+    # The first player in the room has admin privs
+    admin: Optional[SessionID] = None
+
+    players: Dict[SessionID, Player]
 
     small_blind: int = 1
     log: List[CompletedGame]
@@ -485,7 +492,7 @@ def register(room_name: str, session_id: str, player_name: str):
 
     def mutate(state):
         if state is NOT_PRESENT:
-            state = Room(players=dict(), small_blind=1, log=[])
+            state = Room(players=dict(), small_blind=1, log=[], admin=session_id)
 
         if len(player_name) > 64:
             raise CannotRegister("Your name is tooooooo lonnnnng.")
@@ -507,6 +514,8 @@ def register(room_name: str, session_id: str, player_name: str):
         state.players[session_id] = Player(
             balance=100, name=player_name, pending_balance=0
         )
+        state.admin = state.admin or session_id
+
         return state
 
     return room_state.mutate(mutate)
@@ -523,8 +532,12 @@ def start(name: str, session_id: str):
         if state is NOT_PRESENT:
             raise RuntimeError
 
+        if state.admin is not None and state.admin != session_id:
+            admin = state.players.get(state.admin, None)
+            admin_name = admin.name if admin is not None else "[unknown]"
+            raise CannotStart(f"You are not the admin, ask {admin_name}")
+
         if session_id not in state.players:
-            # TODO: make a room admin?
             raise CannotStart("You are not joined to this room")
 
         if state.game is not None:
@@ -582,6 +595,7 @@ class PlayerGameView(BaseModel):
 
 class PlayerRoomView(BaseModel):
     name: Optional[str]
+    is_admin: bool
     players: Dict[str, dict]
     game: Optional[PlayerGameView]
     log: List[CompletedGame]
@@ -622,11 +636,12 @@ def _get_game_view(session_id, room_state):
     )
 
 
-def _show_room(session_id, room_state):
+def _show_room(my_session_id: SessionID, room_state):
     if room_state is NOT_PRESENT:
         return None
 
-    myself = room_state.players.get(session_id, None)
+    myself = room_state.players.get(my_session_id, None)
+
     for game in room_state.log:
         game.players = dict(
             (room_state.get_name(session_id), result)
@@ -635,12 +650,13 @@ def _show_room(session_id, room_state):
 
     return PlayerRoomView(
         name=myself.name if myself else None,
+        is_admin=my_session_id == room_state.admin,
         players=dict(
             (player.name, dict(balance=player.balance))
             for s_id, player in room_state.players.items()
         ),
         log=list(reversed(room_state.log)),
-        game=_get_game_view(session_id, room_state),
+        game=_get_game_view(my_session_id, room_state),
     )
 
 

@@ -62,12 +62,18 @@ th, td {
   max-width: 14em;
   padding: 6px;
 }
+.start-hidden {
+  display: none;
+}
+.start-show {
+}
 </style>
     </head>
     <body>
         <div class="room">
             <div class="name">
                 Welcome <input id="player_name" type="text" value="Enter your Name" style="font-size: xx-large"> to Poker!
+                <button id="start" type="button" class="start-hidden" onclick="start_game()">Start Game</button>
             </div>
             <div class="hand">
                 <h2>Your Hand</h2>
@@ -90,6 +96,7 @@ var game_elem = document.getElementById("game");
 var log_elem = document.getElementById("log");
 var name_elem = document.getElementById("player_name");
 var name_set = false;
+var start_elem = document.getElementById("start");
 var hole_cards_elem = document.getElementById("hole_cards");
 var community_cards_elem = document.getElementById("community_cards");
 var seen_room = false;
@@ -121,7 +128,10 @@ function escape(value) {
 }
 
 function show_gamestate(elem, value, players) {
-    elem.innerHTML ="";
+    elem.innerHTML = "";
+    if (value == null) {
+        return;
+    }
     var newTable = document.createElement("table");
     newTable.className = "tbl";
 
@@ -135,9 +145,7 @@ function show_gamestate(elem, value, players) {
     addHeader(pot, "Pot Value")
     pot.insertCell().innerHTML = value.pot;
 
-
     elem.appendChild(newTable);
-
     var playerTable = document.createElement("table");
     playerTable.className = "tbl";
 
@@ -165,7 +173,9 @@ function show_gamestate(elem, value, players) {
         if (player.eligibility == null) {
             cell.innerHTML = "fold";
         } else {
-            cell.innerHTML = player.bet;
+            if (player.bet != null) {
+                cell.innerHTML = player.bet;
+            }
         }
 
     }
@@ -219,7 +229,7 @@ function show_cards(elem, value) {
         }
         out.style.color = color;
         out.innerText = String.fromCodePoint(codepoint);
-        console.log(codepoint)
+        //console.log(codepoint)
         elem.appendChild(out);
     }
 }
@@ -246,6 +256,10 @@ function fetch_state() {
 
         if(xhr.status != 200 || response.room == null) {
             return;
+        }
+
+        if (response.room.is_admin) {
+            start_elem.className = "start-show";
         }
 
         var game = response.room.game;

@@ -242,6 +242,10 @@ class Game(BaseModel):
         if needed < 0:
             return None
 
+        min_bet = max([i.bet for i in self.players])
+        if value < min_bet and not (min_bet > room.players[bettor.session_id].balance):
+            return None
+
         got = room.players[bettor.session_id].decrement_balance(needed)
         bettor.bet += got
         bettor.has_option = False
@@ -416,6 +420,7 @@ class Room(BaseModel):
 
     players: Dict[SessionID, Player]
 
+    blind_interval: int = 10
     small_blind: int = 1
     log: List[CompletedGame]
 
@@ -458,6 +463,10 @@ class Room(BaseModel):
         if not self._should_continue():
             self.game = None
             return
+
+        if self.blind_interval > 0:
+            num_games = len([i for i in self.log if isinstance(i, CompletedGame)])
+            self.small_blind = 1 << (num_games // self.blind_interval)
 
         if previous_game is None:
             in_hand = []

@@ -23,6 +23,7 @@ with open_binary("poker", "chime.oga") as fh:
 
 logger = logging.getLogger(__name__)
 COOKIE_KEY = "id"
+CS_POLICY = "block-all-mixed-content; frame-ancestors 'none'; default-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net"
 
 
 def base64url(b):
@@ -118,6 +119,8 @@ def identity_middleware(environ, start_response):
         samesite="lax",
     )
     response.headers.add("Set-Cookie", cookie_header)
+    response.headers.add("Content-Security-Policy", CS_POLICY)
+    response.headers.add("Referrer-Policy", "no-referrer")
     return response(environ, start_response)
 
 

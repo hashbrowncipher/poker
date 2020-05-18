@@ -267,7 +267,7 @@ function play_chime() {
 function schedule_chime(enable) {
     if(enable && chime_handle == null) {
       play_chime();
-    } else {
+    } else if(!enable) {
       clearTimeout(chime_handle);
       chime_handle = null;
     }

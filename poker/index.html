@@ -186,6 +186,7 @@ function show_gamestate(elem, game, players, admin_name) {
 
             cell = row.insertCell(2);
             if (player.eligibility == null) {
+                row.setAttribute("style", "color: gray")
                 cell.innerHTML = "fold";
             } else {
                 if (player.bet != null) {

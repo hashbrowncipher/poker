@@ -346,6 +346,7 @@ bet_input.addEventListener("keyup", function(event) {
         xhr.open("POST", "/api/room/" + room_name + "/bet");
     }
 
+    bet_input.value = "";
     xhr.setRequestHeader("Content-Type", "application/json");
     xhr.send(payload);
 });

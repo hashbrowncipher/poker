@@ -424,7 +424,26 @@ class Room(BaseModel):
         random.shuffle(pending_players)
         return pending_players + players
 
+    def _should_continue(self):
+        """Should we initialize a new game?"""
+
+        # Do any two players have a nonzero balance?
+        count = 0
+        for player in self.players.values():
+            if player.balance == 0:
+                continue
+
+            count += 1
+            if count == 2:
+                return True
+
+        return False
+
     def new_game(self, previous_game):
+        if not self._should_continue():
+            self.game = None
+            return
+
         if previous_game is None:
             in_hand = []
             previous_pot = 0

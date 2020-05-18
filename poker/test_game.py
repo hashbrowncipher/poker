@@ -261,3 +261,21 @@ def test_fold_to_big_blind(monkeypatch):
     assert len(_room("test").get()[1].log) == 1
     assert state.stage == 0
     assert state.pot == 3
+
+
+def test_game_stops(monkeypatch):
+    monkeypatch.setattr(game, "random", Random(0))
+
+    game.delete_room("test")
+    game.register("test", "a", "blah a")
+    game.register("test", "b", "blah b")
+
+    game.start("test", "a")
+
+    # Pre-flop
+    game.add_bet("test", "b", 100)
+    game.add_bet("test", "a", 100)
+
+    room_state = _room("test").get()[1]
+    assert len(room_state.log) == 1
+    assert room_state.game is None

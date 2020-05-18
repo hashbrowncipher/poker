@@ -297,10 +297,6 @@ function fetch_state() {
             return;
         }
 
-        if (response.room.is_admin) {
-            show_admin();
-        }
-
         var game = response.room.game;
         if (game != null) {
             var game = response.room.game;
@@ -314,6 +310,9 @@ function fetch_state() {
         if (!name_set && response.room.name != null) {
             name_elem.value = response.room.name;
             name_set = true;
+            if (response.room.admin_name == response.room.name) {
+                show_admin();
+            }
         }
 
         show_gamestate(game_elem, game, response.room.players, response.room.admin_name)

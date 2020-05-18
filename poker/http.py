@@ -56,7 +56,7 @@ def route_chime(request):
         headers=(
             ("Content-Type", "audio/ogg"),
             ("Cache-Control", "public, max-age: 600"),
-        )
+        ),
     )
 
 

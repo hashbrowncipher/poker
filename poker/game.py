@@ -390,10 +390,7 @@ class PlayerAfterGame(BaseModel):
 
     def show(self):
         hand = None if self.hand is None else _convert_card_string(self.hand)
-        return self.__class__(
-            hand=hand,
-            payout=self.payout,
-        )
+        return self.__class__(hand=hand, payout=self.payout,)
 
 
 def _get_card_char(s):
@@ -402,7 +399,7 @@ def _get_card_char(s):
 
 
 def _convert_card_string(s):
-    return ''.join(map(_get_card_char, s))
+    return "".join(map(_get_card_char, s))
 
 
 class CompletedGame(BaseModel):
@@ -689,11 +686,15 @@ def _show_room(my_session_id: SessionID, room_state):
         return None
 
     myself = room_state.players.get(my_session_id, None)
+    if room_state.admin is not None:
+        admin_name = room_state.get_name(room_state.admin)
+    else:
+        admin_name = None
     _convert_log(room_state)
 
     return PlayerRoomView(
         name=myself.name if myself else None,
-        admin_name=room_state.get_name(room_state.admin),
+        admin_name=admin_name,
         players=dict(
             (player.name, dict(balance=player.balance))
             for s_id, player in room_state.players.items()

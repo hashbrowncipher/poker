@@ -1,4 +1,5 @@
 import logging
+import unicodedata
 from random import SystemRandom
 from itertools import cycle
 from pydantic import BaseModel
@@ -21,7 +22,13 @@ random = SystemRandom()
 _NUMBERS = "AKQJX98765432"
 _SUITS = "SHCD"
 _CARDS = "".join([number + suit for number, suit in product(_NUMBERS, _SUITS)])
-_DISALLOWED_CHARACTERS = (
+_DISALLOWED_CHARACTERS = set(
+    # Control characters
+    "\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\x0c\r\x0e\x0f\x10\x11\x12\x13\x14"
+    "\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f\x7f\x80\x81\x82\x83\x84\x85\x86\x87"
+    "\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f\x90\x91\x92\x93\x94\x95\x96\x97\x98\x99\x9a\x9b"
+    "\x9c\x9d\x9e\x9f"
+    # Separators
     "\xa0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a"
     "\u2028\u2029\u202f\u205f\u3000"
 )
@@ -551,16 +558,17 @@ def _get_game(room_name: str):
 
 def register(room_name: str, session_id: str, player_name: str):
     room_state = _room(room_name)
+    player_name = unicodedata.normalize("NFKC", player_name)
+
+    if any(True for c in player_name if c in _DISALLOWED_CHARACTERS):
+        raise CannotRegister("Your name contains disallowed characters")
+
+    if len(player_name) > 64:
+        raise CannotRegister("Your name is tooooooo lonnnnng.")
 
     def mutate(state):
         if state is NOT_PRESENT:
             state = Room(players=dict(), small_blind=1, log=[], admin=session_id)
-
-        if any(True for c in player_name if c in _DISALLOWED_CHARACTERS):
-            raise CannotRegister("Your name contains disallowed characters")
-
-        if len(player_name) > 64:
-            raise CannotRegister("Your name is tooooooo lonnnnng.")
 
         for key, player in state.players.items():
             if key == session_id:

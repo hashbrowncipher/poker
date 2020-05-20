@@ -6,7 +6,10 @@ from poker.game import PlayerInHand
 from poker.game import Player
 from poker.game import Stage
 from poker.game import _make_deck
+from poker.game import CannotRegister
 from random import Random
+
+from pytest import raises
 
 
 def test_play_hand(monkeypatch):
@@ -267,6 +270,20 @@ def test_fold_to_big_blind(monkeypatch):
     assert len(_room("test").get()[1].log) == 1
     assert state.stage == 0
     assert state.pot == 3
+
+
+def test_no_bad_characters(monkeypatch):
+    monkeypatch.setattr(game, "random", Random(0))
+
+    game.delete_room("test")
+    with raises(CannotRegister):
+        game.register("test", "a", "blah\ta")
+
+    # Unicode Roman Numeral I
+    game.register("test", "b", "\u2160")
+
+    with raises(CannotRegister):
+        game.register("test", "c", "I")
 
 
 def test_game_stops(monkeypatch):

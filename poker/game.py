@@ -77,11 +77,6 @@ class PlayerInHand(BaseModel):
     has_option: bool = True
 
 
-class PlayersInHand(List[PlayerInHand]):
-    def rotate(self):
-        return self[1:] + [self[0]]
-
-
 class Game(BaseModel):
     # arranged in bet order: dealer last
     players: List[PlayerInHand]
@@ -259,33 +254,37 @@ class Game(BaseModel):
 
         self._bet(room, session_id, value)
 
-    @property
-    def big_blind(self):
-        players = self.players
-        if len(players) == 2:
-            return players[0]
-        else:
-            return players[1]
+    def _live_players(self, room):
+        balances = room.get_balances()
+        return [p for p in self.players if balances.get(p.session_id, 0) > 0]
 
-    @property
-    def small_blind(self):
-        players = self.players
-        if len(players) == 2:
-            return players[1]
+    def big_blind(self, room) -> PlayerInHand:
+        live_players = self._live_players(room)
+        if len(live_players) == 2:
+            return live_players[0]
         else:
-            return players[0]
+            return live_players[1]
+
+    def small_blind(self, room) -> PlayerInHand:
+        live_players = self._live_players(room)
+        if len(live_players) == 2:
+            return live_players[1]
+        else:
+            return live_players[0]
 
     def initialize(self, room):
         small_blind = room.small_blind
 
-        # TODO: handle insolvency of the player
+        small_blind_player = self.small_blind(room)
+        big_blind_player = self.big_blind(room)
+
         pot = 0
-        pot += self._bet(room, self.small_blind.session_id, small_blind)
-        pot += self._bet(room, self.big_blind.session_id, small_blind * 2)
+        pot += self._bet(room, small_blind_player.session_id, small_blind)
+        pot += self._bet(room, big_blind_player.session_id, small_blind * 2)
 
         self.pot = pot
-        self.small_blind.has_option = True
-        self.big_blind.has_option = True
+        small_blind_player.has_option = True
+        big_blind_player.has_option = True
 
     def _hole_cards_idx(self, idx):
         deck_index = idx * 4
@@ -480,7 +479,15 @@ class Room(BaseModel):
             in_hand = []
             previous_pot = 0
         else:
-            rotated_players = previous_game.players[1:] + previous_game.players[0:1]
+            rotate_by = 1
+            for player in previous_game.players:
+                if self.players[player.session_id].balance > 0:
+                    break
+                rotate_by += 1
+
+            rotated_players = (
+                previous_game.players[rotate_by:] + previous_game.players[0:rotate_by]
+            )
             in_hand = [
                 PlayerInHand(session_id=player.session_id, bet=0)
                 for player in rotated_players

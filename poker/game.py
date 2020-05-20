@@ -21,6 +21,10 @@ random = SystemRandom()
 _NUMBERS = "AKQJX98765432"
 _SUITS = "SHCD"
 _CARDS = "".join([number + suit for number, suit in product(_NUMBERS, _SUITS)])
+_DISALLOWED_CHARACTERS = (
+    "\xa0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a"
+    "\u2028\u2029\u202f\u205f\u3000"
+)
 
 _SUIT_CODEPOINTS = dict(S="♠", H="♡", D="♢", C="♣")
 
@@ -551,6 +555,9 @@ def register(room_name: str, session_id: str, player_name: str):
     def mutate(state):
         if state is NOT_PRESENT:
             state = Room(players=dict(), small_blind=1, log=[], admin=session_id)
+
+        if any(True for c in player_name if c in _DISALLOWED_CHARACTERS):
+            raise CannotRegister("Your name contains disallowed characters")
 
         if len(player_name) > 64:
             raise CannotRegister("Your name is tooooooo lonnnnng.")

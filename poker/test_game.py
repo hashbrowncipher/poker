@@ -14,8 +14,11 @@ def test_play_hand(monkeypatch):
 
     game.delete_room("test")
     game.register("test", "a", "blah a")
+    game.increment_balance("test", "a", name="blah a", amount=100)
     game.register("test", "b", "blah b")
+    game.increment_balance("test", "a", name="blah b", amount=100)
     game.register("test", "c", "other")
+    game.increment_balance("test", "a", name="other", amount=100)
 
     view_a = game.get_player_view("test", "a")
     assert view_a.game is None
@@ -243,8 +246,11 @@ def test_fold_to_big_blind(monkeypatch):
 
     game.delete_room("test")
     game.register("test", "a", "blah a")
+    game.increment_balance("test", "a", name="blah a", amount=100)
     game.register("test", "b", "blah b")
+    game.increment_balance("test", "a", name="blah b", amount=100)
     game.register("test", "c", "other")
+    game.increment_balance("test", "a", name="other", amount=100)
 
     game.start("test", "a")
     assert len(_room("test").get()[1].log) == 0
@@ -268,7 +274,9 @@ def test_game_stops(monkeypatch):
 
     game.delete_room("test")
     game.register("test", "a", "blah a")
+    game.increment_balance("test", "a", name="blah a", amount=100)
     game.register("test", "b", "blah b")
+    game.increment_balance("test", "a", name="blah b", amount=100)
 
     game.start("test", "a")
 

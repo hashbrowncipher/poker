@@ -1,5 +1,6 @@
 import logging
 import unicodedata
+from hashlib import sha256
 from random import SystemRandom
 from itertools import cycle
 from pydantic import BaseModel
@@ -541,7 +542,8 @@ class PydanticConsulKey(ConsulKey):
 
 
 def _room(name):
-    return PydanticConsulKey(f"/room/{name}", Room)
+    hashed_name = sha256(name.encode("utf-8")).hexdigest()
+    return PydanticConsulKey(f"/room/{hashed_name}", Room)
 
 
 class AlertException(Exception):

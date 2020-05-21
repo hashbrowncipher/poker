@@ -1,7 +1,8 @@
 import json
 import logging
 import os
-from importlib.resources import open_binary
+from importlib.resources import read_binary
+from importlib.resources import open_text
 
 from werkzeug.exceptions import HTTPException
 from werkzeug.http import dump_cookie
@@ -12,16 +13,27 @@ from werkzeug.wrappers import Response
 
 from base64 import urlsafe_b64encode
 from hashlib import sha256
+from random import Random
 
 from poker import game
 
-with open_binary("poker", "index.html") as fh:
-    SPA_CONTENTS = fh.read()
-
-with open_binary("poker", "chime.oga") as fh:
-    CHIME_CONTENTS = fh.read()
-
 logger = logging.getLogger(__name__)
+
+random = Random()
+
+_MEMORY_FILENAMES = [
+    "chime.oga",
+    "index.html",
+]
+
+MEMORY_ASSETS = dict((name, read_binary("poker", name)) for name in _MEMORY_FILENAMES)
+
+with open_text("poker", "nouns.txt") as nouns:
+    NOUNS = [l.strip() for l in nouns]
+
+with open_text("poker", "adjectives.txt") as nouns:
+    ADJECTIVES = [l.strip() for l in nouns]
+
 COOKIE_KEY = "id"
 CS_POLICY = "block-all-mixed-content; frame-ancestors 'none'; default-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net"
 
@@ -46,13 +58,14 @@ def _get_cookie_id(request):
 
 def route_spa(request, room_name):
     return Response(
-        SPA_CONTENTS, headers=(("Content-Type", "text/html; charset=utf-8"),)
+        MEMORY_ASSETS["index.html"],
+        headers=(("Content-Type", "text/html; charset=utf-8"),),
     )
 
 
 def route_chime(request):
     return Response(
-        CHIME_CONTENTS,
+        MEMORY_ASSETS["chime.oga"],
         headers=(
             ("Content-Type", "audio/ogg"),
             ("Cache-Control", "public, max-age: 600"),
@@ -100,8 +113,22 @@ def route_cash(request, room_name) -> Response:
         return ex.as_response()
 
 
+def _random_name():
+    return "{}-{}-{}".format(
+        random.choice(ADJECTIVES), random.choice(ADJECTIVES), random.choice(NOUNS),
+    )
+
+
+def route_room_redirect(request) -> Response:
+    for i in range(2):
+        name = _random_name()
+        if not game.room_exists(name):
+            return Response("", status=302, headers=(("Location", "/r/" + name),))
+
+
 url_map = Map(
     [
+        Rule("/", endpoint=route_room_redirect),
         Rule("/r/<room_name>", endpoint=route_spa),
         Rule("/api/room/<room_name>", endpoint=route_show_room),
         Rule("/api/room/<room_name>/bet", endpoint=route_bet),

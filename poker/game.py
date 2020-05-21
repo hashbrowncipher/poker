@@ -756,6 +756,10 @@ def _show_room(my_session_id: SessionID, room_state):
     )
 
 
+def room_exists(room_name: str):
+    return _room(room_name).get()[1] is not NOT_PRESENT
+
+
 def show_room(room_name: str, session_id: str, query_index: str):
     index, room_state = _room(room_name).get(index=query_index, wait="60s")
     value = _show_room(session_id, room_state)

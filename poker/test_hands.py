@@ -107,7 +107,7 @@ def test_comparison():
     for hand, expected in zip(hands, expecteds):
         assert find_best_hand(hand) == expected
 
-    player_hands = zip(count(), hands)
+    player_hands = zip(count(), expecteds)
 
     assert get_winners(player_hands) == [
         (0, Hand(Value.STRAIGHT, "ASKDQCJSXH")),

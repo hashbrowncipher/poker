@@ -7,6 +7,8 @@ from poker.game import Player
 from poker.game import Stage
 from poker.game import _make_deck
 from poker.game import CannotRegister
+from poker.hands import Value
+from poker.hands import Hand
 from random import Random
 
 from pytest import raises
@@ -82,13 +84,15 @@ def test_play_hand(monkeypatch):
     state = _get_game("test")
     assert state.stage == 3
     assert state.pot == 24
+    view_a = game.get_player_view("test", "a")
+    assert view_a.game.community_cards == "6DKD9D9SAH"
 
     final_hands = dict(state._get_final_hands())
     assert len(final_hands) == 2
-    assert final_hands["c"][1] == deck[12:22]
-    assert final_hands["c"][2] == deck[4:8]
-    assert final_hands["b"][1] == deck[12:22]
-    assert final_hands["b"][2] == deck[8:12]
+    assert final_hands["c"][1] == deck[4:8]
+    assert final_hands["b"][1] == deck[8:12]
+    assert final_hands["c"][2] == Hand(Value.TWO_PAIRS, "KDKH9D9SAH")
+    assert final_hands["b"][2] == Hand(Value.PAIR, "9D9SAHKD6D")
 
     game.add_bet("test", "c", 1)
     game.add_bet("test", "b", 1)
@@ -262,7 +266,6 @@ def test_fold_to_big_blind(monkeypatch):
     game.fold("test", "b")
     assert _get_game("test").stage == 0
     game.fold("test", "a")
-    assert _get_game("test").stage == 0
 
     state = _get_game("test")
 

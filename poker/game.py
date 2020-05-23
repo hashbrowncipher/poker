@@ -14,6 +14,7 @@ from itertools import product
 from poker.consul import NOT_PRESENT
 from poker.hands import get_winners
 from poker.hands import find_best_hand
+from poker.hands import Hand
 from poker.hands import Value
 from enum import IntEnum
 from werkzeug.wrappers import Response
@@ -325,10 +326,13 @@ class Game(BaseModel):
             if player.eligibility <= 0:
                 continue
 
+            hole_cards = self._hole_cards_idx(idx)
             yield player.session_id, (
                 player.copy(),
-                community_cards,
-                self._hole_cards_idx(idx),
+                hole_cards,
+                find_best_hand(community_cards + hole_cards)
+                if self.stage == Stage.RIVER
+                else None,
             )
 
     def pay_winners(self, room):
@@ -337,8 +341,8 @@ class Game(BaseModel):
         )
         room.log.append(completed_game)
 
-        # Maps player ids -> (player, community, hole_cards)
-        final_hands: Dict[str, Tuple[PlayerInHand, str, str]] = dict(
+        # Maps player ids -> (player, hole cards, Hand)
+        final_hands: Dict[str, Tuple[PlayerInHand, str, Hand]] = dict(
             self._get_final_hands()
         )
 
@@ -348,8 +352,7 @@ class Game(BaseModel):
                 winning_players = list(final_hands.keys())
             else:
                 winners = get_winners(
-                    (s_id, community + hole)
-                    for (s_id, (_, community, hole)) in final_hands.items()
+                    (s_id, hand) for (s_id, (_, _, hand)) in final_hands.items()
                 )
                 logger.info("Winners:  %s", winners)
                 winning_players = [s_id for (s_id, _) in winners]
@@ -371,12 +374,14 @@ class Game(BaseModel):
                 # TODO(joey): Losers with a smaller player index who have
                 # not folded should also show down
                 if len(final_hands) > 1:
-                    hand = final_hands[s_id][2]
+                    hole_cards = final_hands[s_id][1]
                 else:
-                    hand = None
+                    hole_cards = None
 
                 if s_id not in completed_game.players:
-                    completed_game.players[s_id] = PlayerAfterGame(hand=hand, payout=0)
+                    completed_game.players[s_id] = PlayerAfterGame(
+                        hand=hole_cards, payout=0
+                    )
 
                 completed_game.players[s_id].payout += amount
                 room.players[s_id].increment_balance(amount)

@@ -173,9 +173,7 @@ def find_best_hand(card_str):
 
 
 def _get_winners(hands):
-    evaluated_hands = [(owner, find_best_hand(h)) for (owner, h) in hands]
-
-    it = iter(sorted(evaluated_hands, key=lambda hand: hand[1].sort_key, reverse=True))
+    it = iter(sorted(hands, key=lambda hand: hand[1].sort_key, reverse=True))
     first = next(it)
     yield first
     argmax = first[1].sort_key

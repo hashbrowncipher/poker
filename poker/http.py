@@ -35,7 +35,13 @@ with open_text("poker", "adjectives.txt") as nouns:
     ADJECTIVES = [l.strip() for l in nouns]
 
 COOKIE_KEY = "id"
-CS_POLICY = "block-all-mixed-content; frame-ancestors 'none'; default-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net"
+CS_POLICY = "; ".join(
+    [
+        "block-all-mixed-content",
+        "frame-ancestors 'none'",
+        "default-src 'self' 'unsafe-inline' data: https://cdn.jsdelivr.net",
+    ]
+)
 
 
 def base64url(b):

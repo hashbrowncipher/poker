@@ -13,6 +13,8 @@ from poker.consul import ConsulKey
 from itertools import product
 from poker.consul import NOT_PRESENT
 from poker.hands import get_winners
+from poker.hands import find_best_hand
+from poker.hands import Value
 from enum import IntEnum
 from werkzeug.wrappers import Response
 
@@ -399,14 +401,35 @@ class Game(BaseModel):
         assert self.pot == 0
 
 
+_VALUE_STRINGS = {
+    Value.CARD: "High card",
+    Value.PAIR: "Pair",
+    Value.TWO_PAIRS: "Two pairs",
+    Value.SET: "Three of a kind",
+    Value.STRAIGHT: "Straight",
+    Value.FLUSH: "Flush",
+    Value.FULL_HOUSE: "Full house",
+    Value.QUAD: "Four of a kind",
+    Value.STRAIGHT_FLUSH: "Straight flush",
+}
+
+
 class PlayerAfterGame(BaseModel):
     # Hand will be None if they don't have to show
     hand: Optional[str]
     payout: int
 
-    def show(self):
-        hand = None if self.hand is None else _convert_card_string(self.hand)
-        return self.__class__(hand=hand, payout=self.payout,)
+    def show(self, community_cards: str):
+        ret = dict(payout=self.payout)
+
+        if self.hand:
+            ret["cards"] = _convert_card_string(self.hand)
+
+            evaluated = find_best_hand(self.hand + community_cards)
+            ret["type"] = _VALUE_STRINGS[evaluated.value]
+            ret["hand"] = _convert_card_string(evaluated.cards)
+
+        return ret
 
 
 def _get_card_char(s):
@@ -726,9 +749,11 @@ def _get_game_view(session_id, room_state):
 
 def _convert_log(room_state):
     for game in room_state.log:
+        community_cards = game.community_cards
         game.community_cards = _convert_card_string(game.community_cards)
+
         game.players = dict(
-            (room_state.get_name(session_id), result.show())
+            (room_state.get_name(session_id), result.show(community_cards))
             for (session_id, result) in game.players.items()
         )
 

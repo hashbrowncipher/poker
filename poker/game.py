@@ -593,6 +593,9 @@ def register(room_name: str, session_id: str, player_name: str):
     if any(True for c in player_name if c in _DISALLOWED_CHARACTERS):
         raise CannotRegister("Your name contains disallowed characters")
 
+    if not player_name:
+        raise CannotRegister("Your name is insufficiently truthy.")
+
     if len(player_name) > 64:
         raise CannotRegister("Your name is tooooooo lonnnnng.")
 

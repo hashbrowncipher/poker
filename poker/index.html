@@ -349,10 +349,11 @@ bet_input.addEventListener("keyup", function(event) {
     var xhr = new XMLHttpRequest();
     var payload = undefined;
 
-    if(bet_input.value.trim().toLowerCase() == "fold") {
+    var bet_value = bet_input.value.trim().toLowerCase();
+    if(bet_value == "fold" || bet_value == "f") {
         xhr.open("POST", "/api/room/" + room_name + "/fold");
     } else {
-        var amount = parseInt(bet_input.value);
+        var amount = parseInt(bet_value);
         payload = JSON.stringify({"amount": amount});
         xhr.open("POST", "/api/room/" + room_name + "/bet");
     }

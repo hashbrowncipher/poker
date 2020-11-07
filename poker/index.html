@@ -98,7 +98,6 @@ th, td {
 var room_name = location.pathname.split("/").pop();
 var game_elem = document.getElementById("game");
 var log_elem = document.getElementById("log");
-var name_elem = document.getElementById("player_name");
 var name_set = false;
 var start_elem = document.getElementById("start");
 var hole_cards_elem = document.getElementById("hole_cards");
@@ -172,7 +171,7 @@ function show_gamestate(elem, game, players, admin_name) {
         }
     } else {
         for (var i = 0; i < game.players.length; i++) {
-            var player = game.players[i];
+            var player = game.players[i];            
             var row = playerTable.insertRow();
             var disabled = false;
 
@@ -265,19 +264,53 @@ function start_game() {
     xhr.send();
 }
 
-function play_chime() {
-    var audio = new Audio("/static/chime.oga");
+function get_player_name_element() {
+    return document.getElementById("player_name");
+}
+
+function get_player_name() {
+    return get_player_name_element().value;
+}
+
+function hash(s) {
+  return s.split("").reduce(function(a,b){a=((a<<5)-a)+b.charCodeAt(0);return a&a},0);              
+}
+
+function play_chime(player_name, player_names) { 
     if(chime_handle) {
         clearTimeout(chime_handle);
     }
-    chime_handle = setTimeout(play_chime, 10000);
-    audio.play();
+    chime_handle = setTimeout(function() { play_chime(player_name, player_names) }, 10000);
+
+    const hashes = player_names.map(hash).sort()
+    const index = hashes.indexOf(hash(player_name))
+    make_javascript_sound(index, player_names.length)
+}
+
+function make_javascript_sound(player_index, num_players) {
+    const FREQ_MAX = 10000;
+    const FREQ_MIN = 100;
+    var x_max = Math.log(FREQ_MAX);
+    var x_min = Math.log(FREQ_MIN);
+    var x_player = x_min + (((x_max - x_min) / num_players) * player_index);
+    var frequency = Math.exp(x_player);
+    console.log('freq is ' + frequency)
+    var type='sine'
+    var context = new AudioContext()
+    var o = context.createOscillator()
+    var  g = context.createGain()
+    o.type=type
+    o.connect(g)
+    o.frequency.value=frequency
+    g.connect(context.destination)
+    o.start(0)
+    g.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.6)
 }
 
 
-function schedule_chime(enable) {
+function schedule_chime(enable, player_name, player_names) {
     if(enable && chime_handle == null) {
-      play_chime();
+      play_chime(player_name, player_names);
     } else if(!enable) {
       clearTimeout(chime_handle);
       chime_handle = null;
@@ -313,13 +346,13 @@ function fetch_state() {
             var game = response.room.game;
             show_cards(hole_cards_elem, game.hole_cards);
             show_cards(community_cards_elem, game.community_cards);
-            schedule_chime(game.should_act);
+            schedule_chime(game.should_act, get_player_name(), game.players.map(x => x.name));
             delete game.hole_cards;
             delete game.community_cards;
         }
 
         if (!name_set && response.room.name != null) {
-            name_elem.value = response.room.name;
+            get_player_name_element().value = response.room.name;
             name_set = true;
             if (response.room.admin_name == response.room.name) {
                 show_admin();
@@ -386,8 +419,7 @@ cash_amount.onkeydown = function(event) {
     xhr.send();
 }
 
-var name_input = document.getElementById("player_name");
-name_input.addEventListener("keyup", function(event) {
+get_player_name_element().addEventListener("keyup", function(event) {
     if(event.keyCode != 13) {
         return;
     }
@@ -400,7 +432,7 @@ name_input.addEventListener("keyup", function(event) {
     };
 
     xhr.open("POST", "/api/room/" + room_name + "/join");
-    var payload = JSON.stringify({"name": name_input.value});
+    var payload = JSON.stringify({"name": get_player_name()});
     xhr.setRequestHeader("Content-Type", "application/json");
     xhr.send(payload);
 });

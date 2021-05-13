@@ -24,7 +24,7 @@ pluggy==0.13.1            # via pytest
 prompt-toolkit==3.0.5     # via ipython
 ptyprocess==0.6.0         # via pexpect
 py==1.8.1                 # via pytest
-pydantic==1.5.1           # via -r requirements.in
+pydantic==1.6.2           # via -r requirements.in
 pygments==2.6.1           # via ipython
 pyparsing==2.4.7          # via packaging
 pytest==5.4.2             # via -r requirements.in

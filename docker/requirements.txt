@@ -13,7 +13,7 @@ gevent==20.5.0            # via -r requirements.in
 greenlet==0.4.15          # via gevent
 idna==2.9                 # via requests
 ipython-genutils==0.2.0   # via traitlets
-ipython==7.14.0           # via -r requirements.in
+ipython==7.16.3           # via -r requirements.in
 jedi==0.17.0              # via ipython
 more-itertools==8.2.0     # via pytest
 packaging==20.3           # via pytest

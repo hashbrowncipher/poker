@@ -6,7 +6,7 @@
 #
 attrs==19.3.0             # via pytest
 backcall==0.1.0           # via ipython
-certifi==2020.4.5.1       # via requests
+certifi==2022.12.7       # via requests
 chardet==3.0.4            # via requests
 decorator==4.4.2          # via ipython, traitlets
 gevent==20.5.0            # via -r requirements.in
